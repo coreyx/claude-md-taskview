@@ -34,6 +34,10 @@ None blocking. Decided on 2026-10-08:
 
 The spike (section 0) may add questions; record them here before starting section 1.
 
+Raised by the spike, awaiting the owner:
+
+- **Minimum Claude Code version for task rows.** A `Button` holding `Text` children (the row design in section 3) is refused by 2.1.289 and accepted by 2.1.295. Either (a) keep a `try/catch` fallback to a string-label row, so builds from 2.1.287 still get a working pane without strikethrough on the label, or (b) state a higher minimum version in the README and drop the fallback. Recommendation: (a); it is about fifteen lines and the pane is otherwise unusable on a build one week old.
+
 ## Proposed Changes
 
 The plugin sits at the repo root, so the repo itself is the installable mod.
