@@ -68,7 +68,7 @@ The plugin sits at the repo root, so the repo itself is the installable mod.
 - [ ] Record source repo, commit `b591e0f`, each upstream file copied and what was changed in it.
 
 #### [NEW] `core/types.ts`
-- [ ] From `src/models/types.ts`: `BracketRange`, `StateDefinition`, `TaskStats`, `TaskNode`, `HeadingNode`, `SpecGroup`, `TaskTreeNode`, with `fileUri`/`folderUri`/`taskFileUri` replaced by string paths `filePath`/`folderPath`/`taskFilePath`.
+- [x] From `src/models/types.ts`: `BracketRange`, `StateDefinition`, `TaskStats`, `TaskNode`, `HeadingNode`, `SpecGroup`, `TaskTreeNode`, with `fileUri`/`folderUri`/`taskFileUri` replaced by string paths `filePath`/`folderPath`/`taskFilePath`.
 
 #### [NEW] `core/parse.ts`
 - [ ] From `src/parser/MarkdownASTParser.ts`: `parseTasks(content, specName, filePath, folderPath, template)` and `stripMarkdownFormatting`. The template is a parameter; no singleton.
