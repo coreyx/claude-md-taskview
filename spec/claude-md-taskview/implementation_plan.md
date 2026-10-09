@@ -97,7 +97,7 @@ The plugin sits at the repo root, so the repo itself is the installable mod.
 - [ ] `{ "modules": ["./register.tsx"] }` (or the bundle, per the spike).
 
 #### [NEW] `types/index.d.ts`
-- [ ] Declare `PluginState['md-taskview']`: `groups: SpecGroup[]`, `collapsed: string[]`, `hideCompleted: boolean`, `error: string | null`.
+- [x] Declare `PluginState['md-taskview']`: `groups: SpecGroup[]`, `collapsed: string[]`, `hideCompleted: boolean`, `error: string | null`. (The contract must be self-contained, so it repeats the types of `core/types.ts`; a type check in `hooks/register.tsx` fails if the two drift. It also holds `focused: string | null`, the task row the state picker follows.)
 
 #### [NEW] `hooks/discover.ts`
 - [ ] `discover($, options)`: expand `specPathPattern` one `*` segment at a time with `$.fs.list` (it does not recurse and there is no glob), keep directories containing `taskFileName`, return `{ name, folderPath, taskFilePath, mtimeMs }[]` sorted by name.
