@@ -31,8 +31,10 @@ Section 0 (platform spike) of [implementation_plan.md](./implementation_plan.md)
 - **Test kit:** a test must answer the nouns the mod calls. `mock.clock(on)` covers `$.clock`; `$.session.cwd` is answered with `on('session.cwd', () => ({ value: '...' }))` (a hook stub returns a result object, not a bare value). Use `$.clock.now()` for time.
 - A headless run does not lay `.claude-plugin/types/`; type-checking then needs a `tsconfig.json` outside the mod that includes the skill's `claude-code.d.ts`.
 
+- **Text styles paint as asked on 2.1.289** (owner's report, 2026-10-08; surface taken to be the terminal, not yet confirmed from the pane's first line): plain, `strikethrough`, `dimColor`, the two together, and `color="green"` each draw as named.
+
 ## Not yet verified (needs the owner's eyes on `/spike`, both surfaces)
-- How `strikethrough` and `dimColor` actually render in the terminal and the Desktop Code tab.
+- How `strikethrough` and `dimColor` render in the Desktop Code tab (and on 2.1.295).
 - Whether click and Enter both press a plain `Button` row in the Desktop Code tab.
 - Scrolling and redraw cost with 150 rows (the pane shows "redraw began N ms after press").
 - Whether a `Markdown` `file:` link press reaches `onLinkPress`, and whether `code -g path:line` opens the file at the line.
