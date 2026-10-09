@@ -94,7 +94,7 @@ The plugin sits at the repo root, so the repo itself is the installable mod.
 - [x] Marketplace entry for this repo so `/plugin install md-taskview --marketplace coreyx/claude-md-taskview` works.
 
 #### [NEW] `hooks/hooks.json`
-- [ ] `{ "modules": ["./register.tsx"] }` (or the bundle, per the spike).
+- [x] `{ "modules": ["./register.tsx"] }` (or the bundle, per the spike).
 
 #### [NEW] `types/index.d.ts`
 - [x] Declare `PluginState['md-taskview']`: `groups: SpecGroup[]`, `collapsed: string[]`, `hideCompleted: boolean`, `error: string | null`. (The contract must be self-contained, so it repeats the types of `core/types.ts`; a type check in `hooks/register.tsx` fails if the two drift. It also holds `focused: string | null`, the task row the state picker follows.)
@@ -110,18 +110,18 @@ The plugin sits at the repo root, so the repo itself is the installable mod.
 - [x] `on('tool.call', ...)` for `Edit`, `Write`, `MultiEdit`: `await next(e)`, then `refresh` if the target path ends in `taskFileName`. (Registered in `hooks/register.tsx` and matched on `Edit` and `Write`; this build has no `MultiEdit` tool.)
 
 #### [NEW] `hooks/register.tsx`
-- [ ] `session.start`: load the template, restore `collapsed` and `hideCompleted` from `$.store` (keyed by working directory), first `refresh`, register `/tasks` last inside `try/catch` with `immediate: true`; on a name clash register `/md-tasks`.
-- [ ] `classic.SessionStart` with `source: ['clear', 'resume', 'fork']`: restore state again, since those reset `$.state`.
-- [ ] `command.run`: `$.ui.open({ id: 'md-tasks', title: 'Markdown Tasks', focus: true, closeOnEscape: true })`, return `{}`.
-- [ ] `ui.render` on `{ component: 'Pane', requestId: 'md-tasks' }`: toolbar row, then the tree, sized to `e.props.bodyColumns`.
-- [ ] Toolbar buttons: refresh (`r`), hide/show completed (`f`), expand all / collapse all (`e` / `c`).
-- [ ] Spec group row: name and `(done/total)`; pressing toggles collapse.
-- [ ] Heading row: indented by level; `⚑` for milestone headings (accent colour when all tasks done, outline otherwise), `▸`/`▾` for others; `(done/total)` or `(No tasks)`; pressing toggles collapse.
-- [ ] Task row: state glyph and colour from the active template (`○` todo, `◐` in progress, `●` done in green, `⊘` cancelled, `?`, `!`), label from `cleanText`; `strikethrough` + `dimColor` when the state says so and `strikeThroughCompleted` is on; sub-tasks indented beneath. Rows fall back to a string-label `Button` on builds that refuse `Text` children (see Open Questions).
-- [ ] Pressing a task: `$.fs.read`, `replaceStateChar` to `nextState`, `$.fs.write`, `refresh`. If `replaceStateChar` returns `null`, `refresh` and `$.ui.toast('Task moved on disk; list refreshed')` instead of writing.
-- [ ] Multi-state templates: a `Select` beside the focused task listing every state (replaces the right-click "Set Task State" menu). Hidden for the two-state Standard template.
-- [ ] Empty state: "No `spec/*/tasks.md` found in this folder." Error state: one dim line with `error`.
-- [ ] Persist `collapsed` and `hideCompleted` to `$.store` on every change.
+- [x] `session.start`: load the template, restore `collapsed` and `hideCompleted` from `$.store` (keyed by working directory), first `refresh`, register `/tasks` last inside `try/catch` with `immediate: true`; on a name clash register `/md-tasks`.
+- [x] `classic.SessionStart` with `source: ['clear', 'resume', 'fork']`: restore state again, since those reset `$.state`.
+- [x] `command.run`: `$.ui.open({ id: 'md-tasks', title: 'Markdown Tasks', focus: true, closeOnEscape: true })`, return `{}`.
+- [x] `ui.render` on `{ component: 'Pane', requestId: 'md-tasks' }`: toolbar row, then the tree, sized to `e.props.bodyColumns`.
+- [x] Toolbar buttons: refresh (`r`), hide/show completed (`f`), expand all / collapse all (`e` / `c`).
+- [x] Spec group row: name and `(done/total)`; pressing toggles collapse.
+- [x] Heading row: indented by level; `⚑` for milestone headings (accent colour when all tasks done, outline otherwise), `▸`/`▾` for others; `(done/total)` or `(No tasks)`; pressing toggles collapse. (Every collapsible row draws `▸`/`▾`; a milestone adds `⚑` in the success colour when complete and `⚐` otherwise. Indent follows nesting depth.)
+- [x] Task row: state glyph and colour from the active template (`○` todo, `◐` in progress, `●` done in green, `⊘` cancelled, `?`, `!`), label from `cleanText`; `strikethrough` + `dimColor` when the state says so and `strikeThroughCompleted` is on; sub-tasks indented beneath. Rows fall back to a string-label `Button` on builds that refuse `Text` children (see Open Questions).
+- [x] Pressing a task: `$.fs.read`, `replaceStateChar` to `nextState`, `$.fs.write`, `refresh`. If `replaceStateChar` returns `null`, `refresh` and `$.ui.toast('Task moved on disk; list refreshed')` instead of writing.
+- [x] Multi-state templates: a `Select` beside the focused task listing every state (replaces the right-click "Set Task State" menu). Hidden for the two-state Standard template. (The focused task comes from the `ui.focus` event; the picker draws on the line beneath it.)
+- [x] Empty state: "No `spec/*/tasks.md` found in this folder." Error state: one dim line with `error`.
+- [x] Persist `collapsed` and `hideCompleted` to `$.store` on every change.
 
 ### 4. Jump-to-source (nice-to-have; skip if the spike found no clean route)
 

@@ -1,0 +1,391 @@
+import { atom, read, update } from 'claude-code';
+import type { Elements, EngineInterface, Register, RenderElement, RenderSurface } from 'claude-code';
+
+import { replaceStateChar } from '../core/mutate';
+import { getNextState } from '../core/templates';
+import type { SpecGroup, TaskNode } from '../core/types';
+import type { SpecGroup as ContractSpecGroup } from '../types';
+import { buildRows, collapsibleIds } from './rows';
+import type { Row } from './rows';
+import { readSettings } from './settings';
+import { createSession, loadTemplate, poll, refresh } from './sync';
+import type { Host, Session } from './sync';
+
+// types/index.d.ts has to repeat core's types; this line stops compiling if one changes without the other.
+type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : never) : never;
+export const contractMatchesCore: Same<SpecGroup, ContractSpecGroup> = true;
+
+const PANE = 'md-tasks';
+const POLL_MS = 1500;
+const INDENT = '  ';
+
+const groups = atom({ plugin: 'md-taskview', key: 'groups' } as const, []);
+const collapsed = atom({ plugin: 'md-taskview', key: 'collapsed' } as const, []);
+const hideCompleted = atom({ plugin: 'md-taskview', key: 'hideCompleted' } as const, false);
+const error = atom({ plugin: 'md-taskview', key: 'error' } as const, null);
+const focused = atom({ plugin: 'md-taskview', key: 'focused' } as const, null);
+
+/** One styled run of text in a row. */
+interface Part {
+  text: string;
+  color?: string;
+  bold?: boolean;
+  dimColor?: boolean;
+  strikethrough?: boolean;
+}
+
+/** A row the person can press: styled text before and after a label. */
+export interface Pressable {
+  key: string;
+  before: Part[];
+  label: Part;
+  after: Part[];
+  onPress: () => void;
+}
+
+/** The slice of a surface's element table the rows are built from. */
+export type RowElements = Pick<Elements[RenderSurface], 'Box' | 'Button' | 'Text'>;
+
+/**
+ * Draws a pressable row, as one plain Button holding styled Text where the
+ * build allows it.
+ *
+ * Builds before 2.1.294 refuse Text inside a Button, throwing as the element
+ * is made; the row then falls back to Text, a string-label Button and Text
+ * side by side. A Button's own label cannot be struck through, so there a
+ * struck label is only dimmed.
+ *
+ * @param el The surface's Box, Button and Text.
+ * @param row What to draw.
+ * @param nesting Remembers whether the rich form was refused, so a long list tries it once.
+ */
+export function drawPressable(el: RowElements, row: Pressable, nesting: { isRefused: boolean }): RenderElement {
+  const { Box, Button, Text } = el;
+  const text = (part: Part): RenderElement => {
+    // Only the props a part sets are passed: a surface may refuse one given as undefined.
+    const { text: content, ...style } = part;
+    return <Text {...style}>{content}</Text>;
+  };
+  const before = row.before.filter((part) => part.text !== '').map(text);
+  const after = row.after.filter((part) => part.text !== '').map(text);
+
+  if (!nesting.isRefused) {
+    try {
+      return (
+        <Button key={row.key} plain onPress={row.onPress}>
+          {before}
+          {text(row.label)}
+          {after}
+        </Button>
+      );
+    } catch {
+      nesting.isRefused = true;
+    }
+  }
+
+  return (
+    <Box>
+      {before}
+      <Button key={row.key} plain dimColor={row.label.dimColor === true} label={row.label.text} onPress={row.onPress} />
+      {after}
+    </Box>
+  );
+}
+
+/** What the module keeps between events, beside the sync session. */
+interface Mod {
+  session: Session;
+  /** The command name that registered: `tasks`, or `md-tasks` when a built-in holds that. */
+  commandName: string | undefined;
+  /** The `$.store` key this folder's view is saved under. */
+  viewKey: string;
+  /** Per surface, whether the build refused Text inside a Button. */
+  nestingBySurface: Map<string, { isRefused: boolean }>;
+}
+
+// Claude Code follows `$` only into functions declared at the top of this
+// file, never into a closure or across an import. So everything that takes
+// `$` is declared here, and the files under hooks/ get closures instead.
+
+/** What hooks/sync.ts and hooks/discover.ts need from Claude Code, as closures over `$`. */
+function hostOf($: EngineInterface): Host {
+  return {
+    list: (path) => $.fs.list(path),
+    stat: (path) => $.fs.stat(path),
+    read: async (path) => {
+      // `$.fs.read` also has a bytes form, which this mod never asks for.
+      const content = await $.fs.read(path);
+      return typeof content === 'string' ? content : '';
+    },
+    setGroups: (parsed) => update($, groups, () => parsed),
+    setError: (message) => update($, error, () => message),
+    toast: (text) => $.ui.toast(text),
+  };
+}
+
+/** Loads what a folder's pane was left showing: its collapsed rows and the completed filter. */
+async function restoreView($: EngineInterface, mod: Mod, cwd: string): Promise<void> {
+  mod.viewKey = `view:${cwd}`;
+  const saved = ((await $.store.get(mod.viewKey)) ?? {}) as { collapsed?: unknown; hideCompleted?: unknown };
+  const ids = Array.isArray(saved.collapsed) ? saved.collapsed.filter((id) => typeof id === 'string') : [];
+  const isHidden =
+    typeof saved.hideCompleted === 'boolean' ? saved.hideCompleted : mod.session.settings.hideCompletedByDefault;
+
+  await update($, collapsed, () => ids);
+  await update($, hideCompleted, () => isHidden);
+}
+
+async function saveView($: EngineInterface, mod: Mod): Promise<void> {
+  await $.store.set(mod.viewKey, { collapsed: await read($, collapsed), hideCompleted: await read($, hideCompleted) });
+}
+
+async function setCollapsed($: EngineInterface, mod: Mod, change: (ids: string[]) => string[]): Promise<void> {
+  await update($, collapsed, (ids) => change(ids));
+  await saveView($, mod);
+}
+
+async function toggleHideCompleted($: EngineInterface, mod: Mod): Promise<void> {
+  await update($, hideCompleted, (isHidden) => !isHidden);
+  await saveView($, mod);
+}
+
+/**
+ * Writes one task's new state character to its file.
+ *
+ * There is no editor buffer or undo: the file is re-read, the bracket is
+ * checked against what the pane drew, and the whole file is written back.
+ * When the bracket is no longer there the list is refreshed and nothing is
+ * written.
+ */
+async function setTaskState($: EngineInterface, mod: Mod, task: TaskNode, nextChar: string): Promise<void> {
+  const host = hostOf($);
+  try {
+    const content = await host.read(task.filePath);
+    const changed = replaceStateChar(content, task.bracketRange, task.char, nextChar, task.rawText);
+    if (changed === null) {
+      await refresh(host, mod.session);
+      $.ui.toast('Task moved on disk; list refreshed');
+      return;
+    }
+
+    await $.fs.write(task.filePath, changed);
+    await refresh(host, mod.session);
+  } catch (failure) {
+    $.ui.toast(`Markdown Tasks: could not update the task (${failure instanceof Error ? failure.message : failure})`);
+  }
+}
+
+/** Registers `/tasks`, or `/md-tasks` when a built-in holds that name. */
+async function registerCommand($: EngineInterface, mod: Mod): Promise<void> {
+  const description = 'Show the Markdown task tree of this folder in a pane';
+  try {
+    await $.command.register({ name: 'tasks', description, immediate: true });
+    mod.commandName = 'tasks';
+  } catch {
+    try {
+      await $.command.register({ name: 'md-tasks', description, immediate: true });
+      mod.commandName = 'md-tasks';
+    } catch {
+      $.ui.log('Markdown Tasks: neither /tasks nor /md-tasks could be registered');
+    }
+  }
+}
+
+/** Answers the mod's command: opens the pane, and prints a line only when that failed. */
+async function openPane($: EngineInterface, mod: Mod): Promise<{ text?: string }> {
+  try {
+    await refresh(hostOf($), mod.session);
+    await $.ui.open({ id: PANE, title: 'Markdown Tasks', focus: true, closeOnEscape: true });
+    return {};
+  } catch (failure) {
+    return { text: `Markdown Tasks: could not open the pane (${failure instanceof Error ? failure.message : failure})` };
+  }
+}
+
+export const register: Register = (on, options) => {
+  const mod: Mod = {
+    session: createSession(readSettings(options)),
+    commandName: undefined,
+    viewKey: 'view',
+    nestingBySurface: new Map(),
+  };
+  const { session } = mod;
+
+  // The mod's own work never fails a hook: a hook that throws is skipped, and these all sit on a chain.
+  on('session.start', async ($, e, next) => {
+    const host = hostOf($);
+    await loadTemplate(host, session);
+    await restoreView($, mod, e.cwd).catch(() => undefined);
+    await refresh(host, session);
+    $.clock.every(POLL_MS, () => void poll(host, session));
+    // Last, so a name clash cannot keep the rest from being set up.
+    await registerCommand($, mod);
+
+    return next(e);
+  });
+
+  // /clear, /resume and a fork reset $.state without a session.start.
+  on('classic.SessionStart', { source: ['clear', 'resume', 'fork'] }, async ($, e, next) => {
+    await restoreView($, mod, e.cwd).catch(() => undefined);
+    await refresh(hostOf($), session);
+
+    return next(e);
+  });
+
+  // Only the name this mod registered is its own: the other may be a built-in's.
+  on('command.run', { command: 'tasks' }, async ($, e, next) => {
+    if (mod.commandName !== 'tasks') return next(e);
+
+    return openPane($, mod);
+  });
+
+  on('command.run', { command: 'md-tasks' }, async ($, e, next) => {
+    if (mod.commandName !== 'md-tasks') return next(e);
+
+    return openPane($, mod);
+  });
+
+  // Claude's own edit to a task file shows at once, not at the next poll.
+  on('tool.call', { tool: ['Edit', 'Write'] }, async ($, e, next) => {
+    const ran = await next(e);
+    const fileName = e.file_path.replace(/\\/g, '/').split('/').at(-1) ?? '';
+    if (fileName.toLowerCase() === session.settings.taskFileName.toLowerCase()) {
+      await refresh(hostOf($), session).catch(() => undefined);
+    }
+
+    return ran;
+  });
+
+  // The state picker follows the focus ring, which only this event reports.
+  on('ui.focus', { requestId: PANE }, async ($, e, next) => {
+    const moved = await next(e);
+    const key = e.element;
+    const isPicker = key !== undefined && key.startsWith('s-');
+    if (session.template.states.length > 2 && !isPicker) {
+      const taskKey = key !== undefined && key.startsWith('t-') ? key : null;
+      const held = await read($, focused).catch(() => taskKey);
+      if (held !== taskKey) {
+        await update($, focused, () => taskKey).catch(() => undefined);
+      }
+    }
+
+    return moved;
+  });
+
+  on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
+    const el = $.ui.resolve(e);
+    const { Box, Button, Text } = el;
+    const Select = 'Select' in el ? el.Select : undefined;
+
+    const list = await read($, groups);
+    const collapsedIds = await read($, collapsed);
+    const isHiding = await read($, hideCompleted);
+    const failure = await read($, error);
+    const focusedKey = await read($, focused);
+
+    const { settings, template } = session;
+    const rows = buildRows(list, { collapsed: new Set(collapsedIds), hideCompleted: isHiding, template, settings });
+    const columns = Math.max(20, e.props.bodyColumns);
+    const nesting = mod.nestingBySurface.get(e.surface) ?? { isRefused: false };
+    mod.nestingBySurface.set(e.surface, nesting);
+
+    /** Shortens a label so its row stays on one line of the pane. */
+    const fit = (label: string, used: number): string => {
+      const room = Math.max(8, columns - used);
+      return label.length > room ? `${label.slice(0, room - 1)}…` : label;
+    };
+
+    const drawRow = (row: Row): RenderElement | RenderElement[] => {
+      const indent = INDENT.repeat(row.depth);
+
+      if (row.kind === 'task') {
+        const lead = `${indent}${row.glyph} `;
+        const rowElement = drawPressable(
+          el,
+          {
+            key: row.key,
+            before: [{ text: lead, ...(row.color === undefined ? {} : { color: row.color }) }],
+            label: {
+              text: fit(row.task.cleanText, lead.length),
+              ...(row.isStruck ? { strikethrough: true, dimColor: true } : {}),
+            },
+            after: [],
+            onPress: () => void setTaskState($, mod, row.task, getNextState(template, row.task.char).char),
+          },
+          nesting,
+        );
+        if (Select === undefined || template.states.length <= 2 || row.key !== focusedKey) return rowElement;
+
+        // Replaces the extension's right-click "Set Task State" menu.
+        return [
+          rowElement,
+          <Box paddingLeft={lead.length}>
+            <Select
+              key={`s-${row.key}`}
+              label="State"
+              options={template.states.map((state, index) => ({
+                value: String(index),
+                label: `[${state.char}] ${state.label}`,
+              }))}
+              value={String(template.states.indexOf(row.state))}
+              onSelect={(value) => {
+                const picked = template.states[Number(value)];
+                if (picked) void setTaskState($, mod, row.task, picked.char);
+              }}
+            />
+          </Box>,
+        ];
+      }
+
+      const chevron = row.isCollapsed ? '▸ ' : '▾ ';
+      const flag = row.kind === 'heading' && row.isMilestone ? (row.isComplete ? '⚑ ' : '⚐ ') : '';
+      const count = row.count === '' ? '' : ` ${row.count}`;
+      const used = indent.length + chevron.length + flag.length + count.length;
+
+      return drawPressable(
+        el,
+        {
+          key: row.key,
+          before: [
+            { text: `${indent}${chevron}` },
+            { text: flag, ...(row.kind === 'heading' && row.isComplete ? { color: 'success' } : {}) },
+          ],
+          label: { text: fit(row.kind === 'group' ? row.title : row.label, used), bold: row.kind === 'group' },
+          after: [{ text: count, dimColor: true }],
+          onPress: () => void setCollapsed($, mod, (ids) => (ids.includes(row.id) ? ids.filter((id) => id !== row.id) : [...ids, row.id])),
+        },
+        nesting,
+      );
+    };
+
+    return (
+      <Box flexDirection="column" width={columns}>
+        <Box columnGap={2} flexWrap="wrap">
+          <Button key="refresh" plain hotkey="r" label="Refresh" onPress={() => void refresh(hostOf($), session)} />
+          <Button
+            key="filter"
+            plain
+            hotkey="f"
+            label={isHiding ? 'Show completed' : 'Hide completed'}
+            onPress={() => void toggleHideCompleted($, mod)}
+          />
+          <Button key="expand" plain hotkey="e" label="Expand all" onPress={() => void setCollapsed($, mod, () => [])} />
+          <Button
+            key="collapse"
+            plain
+            hotkey="c"
+            label="Collapse all"
+            onPress={() => void setCollapsed($, mod, () => collapsibleIds(list))}
+          />
+        </Box>
+        {failure !== null && <Text dimColor>{failure}</Text>}
+        {list.length === 0 && failure === null && (
+          <Text dimColor>
+            No {settings.specPathPattern}/{settings.taskFileName} found in this folder.
+          </Text>
+        )}
+        {rows.map(drawRow)}
+      </Box>
+    );
+  });
+};

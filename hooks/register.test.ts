@@ -1,0 +1,348 @@
+import type { On, RenderElement } from 'claude-code';
+import { expect, mock, test } from 'claude-code/testing';
+import type { Engine } from 'claude-code/testing';
+
+import { drawPressable } from './register';
+import type { RowElements } from './register';
+
+const SURFACES = ['terminal', 'desktop'] as const;
+const CWD = 'C:\\work';
+const AUTH_PATH = 'spec/auth/tasks.md';
+
+const AUTH = `# Milestone 1: Setup
+- [x] **Scaffold** the project
+- [ ] Write tests
+## Details
+- [x] Sub item
+`;
+const BILLING = `- [ ] Invoices
+- [ ] Refunds
+`;
+
+const PANE = {
+  title: 'Markdown Tasks',
+  isFocused: true,
+  bodyColumns: 60,
+  placement: 'dock',
+  scroll: { offset: 0, bodyRows: 40 },
+  view: {},
+} as const;
+
+/**
+ * Answers everything the mod asks of Claude Code from memory: a disk of
+ * files with modification times, the store, the clock, and the commands and
+ * toasts it raises, each recorded for the test to read.
+ */
+function world(on: On, files: Record<string, string>, takenCommands: string[] = []) {
+  const state = {
+    files: { ...files },
+    mtimes: Object.fromEntries(Object.keys(files).map((path) => [path, 1000])) as Record<string, number>,
+    reads: [] as string[],
+    writes: [] as { path: string; text: string }[],
+    toasts: [] as string[],
+    commands: [] as string[],
+    opened: [] as string[],
+    store: {} as Record<string, unknown>,
+    clock: mock.clock(on, { now: 5000 }),
+    /** Changes a file as another editor would: new text, newer modification time. */
+    edit(path: string, text: string) {
+      state.files[path] = text;
+      state.mtimes[path] = (state.mtimes[path] ?? 1000) + 1000;
+    },
+  };
+
+  // The engine resolves a relative path against the session's folder before a hook sees it, so each
+  // request is matched back to the test's relative paths by its tail.
+  const folders = new Set(
+    Object.keys(files).flatMap((path) => path.split('/').map((_, depth, parts) => parts.slice(0, depth).join('/'))),
+  );
+  const relative = (asked: string): string => {
+    const path = asked.replace(/\\/g, '/');
+    const known = [...Object.keys(state.files), ...folders]
+      .filter((one) => one !== '' && (path === one || path.endsWith(`/${one}`)))
+      .sort((a, b) => b.length - a.length)[0];
+    return known ?? '';
+  };
+
+  on('fs.list', (_$, e) => {
+    const folder = relative(e.path);
+    const prefix = folder === '' ? '' : `${folder}/`;
+    const names = new Map<string, 'file' | 'dir'>();
+    for (const path of Object.keys(state.files)) {
+      if (!path.startsWith(prefix)) continue;
+      const [name = '', ...deeper] = path.slice(prefix.length).split('/');
+      names.set(name, deeper.length > 0 ? 'dir' : 'file');
+    }
+    return { value: [...names].map(([name, kind]) => ({ name, kind, size: 0, mtimeMs: 0, isLink: false })) };
+  });
+  on('fs.stat', (_$, e) => {
+    const path = relative(e.path);
+    const text = state.files[path];
+    if (text === undefined) return { deny: `ENOENT: ${e.path}` };
+    return { value: { kind: 'file' as const, size: text.length, mtimeMs: state.mtimes[path] ?? 0, isLink: false } };
+  });
+  on('fs.read', (_$, e) => {
+    const path = relative(e.path);
+    const text = state.files[path];
+    if (text === undefined) return { deny: `ENOENT: ${e.path}` };
+    state.reads.push(path);
+    return { value: text };
+  });
+  on('fs.write', (_$, e) => {
+    const path = relative(e.path);
+    state.writes.push({ path, text: e.text });
+    state.edit(path, e.text);
+    return { value: undefined };
+  });
+  on('store.get', (_$, e) => ({ value: state.store[e.key] }));
+  on('store.set', (_$, e) => {
+    state.store[e.key] = e.value;
+    return { value: undefined };
+  });
+  on('command.register', (_$, e) => {
+    if (takenCommands.includes(e.name)) return { deny: `/${e.name} is a built-in command` };
+    state.commands.push(e.name);
+    return { value: { command: e.name } };
+  });
+  on('command.run', (_$, e) => ({ text: `built-in /${e.command}` }));
+  on('ui.open', (_$, e) => {
+    state.opened.push(e.id);
+    return { value: { isPlaced: true as const } };
+  });
+  on('ui.toast', (_$, e) => {
+    state.toasts.push(e.text);
+    return { value: undefined };
+  });
+  on('ui.log', () => ({ value: undefined }));
+  on('ui.focus', () => ({}));
+  on('session.start', (_$, e) => ({ cwd: e.cwd }));
+  on('classic.SessionStart', () => ({}));
+
+  return state;
+}
+
+for (const surface of SURFACES) {
+  const start = async ($: Engine) => {
+    await $.session.start({ cwd: CWD, surface, isInteractive: true });
+    return $.ui.mount({ plugin: 'md-taskview', surface, component: 'Pane', requestId: 'md-tasks', props: PANE });
+  };
+
+  test(`${surface}: draws each spec folder as a group with its count`, async ($, on) => {
+    const disk = world(on, { [AUTH_PATH]: AUTH, 'spec/billing/tasks.md': BILLING, 'spec/notes.md': 'not a spec' });
+    const ui = await start($);
+
+    expect((await ui.find({ key: 'g-0' }))?.text).toContain('auth (2/3)');
+    expect((await ui.find({ key: 'g-1' }))?.text).toContain('billing (0/2)');
+    expect((await ui.find({ key: 'h-0-0' }))?.text).toContain('Milestone 1: Setup (2/3)');
+    // Bold markers are stripped by the copied parser, whose lookbehind patterns must run in this engine.
+    expect((await ui.find({ key: 't-0-1' }))?.text).toContain('Scaffold the project');
+    expect(disk.commands).toEqual(['tasks']);
+    await ui.unmount();
+  });
+
+  test(`${surface}: pressing a task changes one character on disk and redraws it done`, async ($, on) => {
+    const disk = world(on, { [AUTH_PATH]: AUTH });
+    const ui = await start($);
+
+    await ui.press({ key: 't-0-2' });
+
+    expect(disk.writes).toEqual([{ path: AUTH_PATH, text: AUTH.replace('- [ ] Write tests', '- [x] Write tests') }]);
+    expect((await ui.find({ key: 'g-0' }))?.text).toContain('auth (3/3)');
+    expect((await ui.find({ type: 'Text', text: 'Write tests' }))?.props).toMatchObject({ strikethrough: true });
+    // The milestone's flag fills once every task beneath it is done.
+    expect((await ui.find({ type: 'Text', text: '⚑' }))?.props).toMatchObject({ color: 'success' });
+    await ui.unmount();
+  });
+
+  test(`${surface}: pressing a heading hides its tasks and saves the collapse`, async ($, on) => {
+    const disk = world(on, { [AUTH_PATH]: AUTH });
+    const ui = await start($);
+
+    await ui.press({ key: 'h-0-0' });
+
+    expect(await ui.find({ key: 't-0-1' })).toBeUndefined();
+    expect(await ui.find({ key: 'h-0-3' })).toBeUndefined();
+    expect((await ui.find({ key: 'h-0-0' }))?.text).toContain('▸');
+    expect(disk.store[`view:${CWD}`]).toEqual({ collapsed: [`${AUTH_PATH}#H0_L1`], hideCompleted: false });
+
+    await ui.press({ key: 'h-0-0' });
+    expect(await ui.find({ key: 't-0-1' })).toBeDefined();
+    await ui.unmount();
+  });
+
+  test(`${surface}: "hide completed" removes done tasks and leaves the counts`, async ($, on) => {
+    const disk = world(on, { [AUTH_PATH]: AUTH });
+    const ui = await start($);
+
+    await ui.press({ key: 'filter' });
+
+    expect(await ui.find({ key: 't-0-1' })).toBeUndefined();
+    expect(await ui.find({ key: 't-0-2' })).toBeDefined();
+    // A nested heading whose tasks are all done goes too.
+    expect(await ui.find({ key: 'h-0-3' })).toBeUndefined();
+    expect((await ui.find({ key: 'g-0' }))?.text).toContain('auth (2/3)');
+    expect((await ui.find({ key: 'filter' }))?.props).toMatchObject({ label: 'Show completed' });
+    expect(disk.store[`view:${CWD}`]).toEqual({ collapsed: [], hideCompleted: true });
+    await ui.unmount();
+  });
+
+  test(`${surface}: a poll re-reads a file only when its modification time changed`, async ($, on) => {
+    const disk = world(on, { [AUTH_PATH]: AUTH });
+    const ui = await start($);
+    const readsAtStart = disk.reads.length;
+
+    await disk.clock.advance(1500);
+    expect(disk.reads.length).toBe(readsAtStart);
+
+    disk.edit(AUTH_PATH, AUTH.replace('- [ ] Write tests', '- [x] Write tests'));
+    await disk.clock.advance(1500);
+
+    expect(disk.reads.length).toBe(readsAtStart + 1);
+    expect((await ui.find({ key: 'g-0' }))?.text).toContain('auth (3/3)');
+    await ui.unmount();
+  });
+
+  test(`${surface}: a task that moved on disk is not written, and the list refreshes`, async ($, on) => {
+    const disk = world(on, { [AUTH_PATH]: AUTH });
+    const ui = await start($);
+
+    // Another editor inserts a line above; no poll has run, so the pane still holds the old positions.
+    disk.edit(AUTH_PATH, `Intro\n${AUTH}`);
+    await ui.press({ key: 't-0-2' });
+
+    expect(disk.writes).toEqual([]);
+    expect(disk.toasts).toEqual(['Task moved on disk; list refreshed']);
+    expect((await ui.find({ key: 't-0-3' }))?.text).toContain('Write tests');
+    await ui.unmount();
+  });
+
+  test(`${surface}: the saved view comes back after /clear`, async ($, on) => {
+    const disk = world(on, { [AUTH_PATH]: AUTH });
+    disk.store[`view:${CWD}`] = { collapsed: [`${AUTH_PATH}#H0_L1`], hideCompleted: false };
+    const ui = await start($);
+    expect(await ui.find({ key: 't-0-1' })).toBeUndefined();
+
+    await ui.press({ key: 'expand' });
+    expect(await ui.find({ key: 't-0-1' })).toBeDefined();
+
+    disk.store[`view:${CWD}`] = { collapsed: [AUTH_PATH], hideCompleted: false };
+    await $.classic.SessionStart({ source: 'clear', cwd: CWD });
+    expect(await ui.find({ key: 'h-0-0' })).toBeUndefined();
+    expect((await ui.find({ key: 'g-0' }))?.text).toContain('▸');
+    await ui.unmount();
+  });
+
+  test(`${surface}: says so when the folder holds no task files`, async ($, on) => {
+    world(on, { 'README.md': 'nothing here' });
+    const ui = await start($);
+
+    expect(await ui.find({ type: 'Text', text: 'No spec/*/tasks.md found in this folder.' })).toBeDefined();
+    await ui.unmount();
+  });
+
+  test(
+    `${surface}: a multi-state template offers a state picker on the focused task`,
+    { options: { stateTemplate: 'Obsidian Tasks' } },
+    async ($, on) => {
+      const disk = world(on, { [AUTH_PATH]: '- [/] Draft the plan\n- [-] Dropped idea\n' });
+      const ui = await start($);
+
+      // Pressing cycles through the template: in progress -> done.
+      expect((await ui.find({ key: 't-0-0' }))?.text).toContain('◐');
+      await ui.press({ key: 't-0-0' });
+      expect(disk.files[AUTH_PATH]).toBe('- [x] Draft the plan\n- [-] Dropped idea\n');
+
+      await $.ui.focus({
+        component: 'Pane',
+        requestId: 'md-tasks',
+        plugin: 'md-taskview',
+        element: 't-0-1',
+        origin: { kind: 'person' },
+      });
+      expect((await ui.find({ key: 's-t-0-1' }))?.props).toMatchObject({ value: '3' });
+
+      await ui.select({ key: 's-t-0-1', value: '5' });
+      expect(disk.files[AUTH_PATH]).toBe('- [x] Draft the plan\n- [!] Dropped idea\n');
+      await ui.unmount();
+    },
+  );
+}
+
+test("Claude's own edit to a task file shows without waiting for a poll", async ($, on) => {
+  const disk = world(on, { [AUTH_PATH]: AUTH });
+  // Stands for the Edit tool: the file changes on disk as the call is answered.
+  on('tool.call', { tool: 'Edit' }, () => {
+    disk.edit(AUTH_PATH, AUTH.replace('- [ ] Write tests', '- [x] Write tests'));
+    return { result: {}, text: 'edited' };
+  });
+  await $.session.start({ cwd: CWD, surface: 'terminal', isInteractive: true });
+  const ui = await $.ui.mount({
+    plugin: 'md-taskview',
+    surface: 'terminal',
+    component: 'Pane',
+    requestId: 'md-tasks',
+    props: PANE,
+  });
+
+  await $.tool.call({
+    tool: 'Edit',
+    file_path: `${CWD}\\spec\\auth\\tasks.md`,
+    old_string: '- [ ] Write tests',
+    new_string: '- [x] Write tests',
+  });
+
+  expect((await ui.find({ key: 'g-0' }))?.text).toContain('auth (3/3)');
+  await ui.unmount();
+});
+
+test('falls back to /md-tasks and leaves a built-in /tasks alone', async ($, on) => {
+  const disk = world(on, { [AUTH_PATH]: AUTH }, ['tasks']);
+  await $.session.start({ cwd: CWD, surface: 'terminal', isInteractive: true });
+
+  // As the engine raises a command the person typed.
+  const typed = (command: string) => ({
+    command,
+    args: '',
+    origin: { kind: 'composer' as const },
+    presentation: { isFullscreen: true, columns: 120 },
+  });
+
+  expect(disk.commands).toEqual(['md-tasks']);
+  expect(await $.command.run(typed('tasks'))).toMatchObject({ text: 'built-in /tasks' });
+  expect(disk.opened).toEqual([]);
+
+  await $.command.run(typed('md-tasks'));
+  expect(disk.opened).toEqual(['md-tasks']);
+});
+
+test('a build that refuses Text inside a Button gets string-label rows', () => {
+  // Stands in for Claude Code before 2.1.294, whose Button threw on anything but one string child.
+  const made = (type: string) => (props: Record<string, unknown>) => ({ type, props }) as unknown as RenderElement;
+  const old = {
+    Box: made('Box'),
+    Text: made('Text'),
+    Button: (props: Record<string, unknown>) => {
+      if (props.label === undefined && typeof props.children !== 'string') {
+        throw new Error('JSX element <Button> needs a label: the label prop, or one string child');
+      }
+      return made('Button')(props);
+    },
+  } as unknown as RowElements;
+
+  const nesting = { isRefused: false };
+  const row = {
+    key: 't-0-1',
+    before: [{ text: '● ', color: 'success' }],
+    label: { text: 'Done task', strikethrough: true, dimColor: true },
+    after: [{ text: ' (1/1)', dimColor: true }],
+    onPress: () => {},
+  };
+
+  const drawn = drawPressable(old, row, nesting) as unknown as { type: string; props: { children: unknown } };
+  expect(nesting.isRefused).toBe(true);
+  expect(drawn.type).toBe('Box');
+  const children = (drawn.props.children as unknown[]).flat() as { type: string; props: Record<string, unknown> }[];
+  expect(children.map((child) => child.type)).toEqual(['Text', 'Button', 'Text']);
+  // The label can only be dimmed there: a Button's label takes no strikethrough.
+  expect(children[1]?.props).toMatchObject({ key: 't-0-1', label: 'Done task', dimColor: true, plain: true });
+});
