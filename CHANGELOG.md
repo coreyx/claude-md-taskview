@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-09
+
 ### Changed
 - **Settings help text:** each text setting's description now names its default and says to leave the field empty to use it. The install dialog starts those fields empty rather than filling the default in, which read as if a value had to be typed.
 

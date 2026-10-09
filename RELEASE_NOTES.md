@@ -1,5 +1,31 @@
 # Release Notes
 
+## v0.1.1 - 2026-10-09
+
+A small follow-up to the first release that makes the settings easier to fill in. Nothing about the pane itself changes.
+
+### Clearer settings at install
+
+When you install the mod, Claude Code asks for its settings, and the text settings start out empty. That looked as though each one needed a value typed in. It does not: an empty field uses the default.
+
+Each text setting's help text now says so and names its default:
+
+- **Spec path pattern:** `spec/*`
+- **Task file name:** `tasks.md`
+- **Milestone keywords:** `Milestone, Release, Alpha, Beta`
+
+If you typed something into these fields when you installed v0.1.0, it was saved and is still in effect. To go back to a default, clear the field in `/config`.
+
+### Updating
+
+From a shell:
+
+```bash
+claude plugin update md-taskview@claude-md-taskview
+```
+
+Then start a new session.
+
 ## v0.1.0 - 2026-10-09
 
 ### Markdown Tasks for Claude Code (`claude-md-taskview`)
