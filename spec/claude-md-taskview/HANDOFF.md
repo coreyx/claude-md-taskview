@@ -32,6 +32,8 @@ Section 0 (platform spike) of [implementation_plan.md](./implementation_plan.md)
 - A headless run does not lay `.claude-plugin/types/`; type-checking then needs a `tsconfig.json` outside the mod that includes the skill's `claude-code.d.ts`.
 
 - **Text styles paint as asked on 2.1.289** (owner's report, 2026-10-08; surface taken to be the terminal, not yet confirmed from the pane's first line): plain, `strikethrough`, `dimColor`, the two together, and `color="green"` each draw as named.
+- **On 2.1.289 a fallback row can be pressed, and the pane scrolls with 150 rows** (owner's report, 2026-10-08). Whether "pressed" covered both a click and Enter is not yet stated.
+- **Redraw cost is not yet measured.** The first reading, 4160 ms with 150 rows, came from a figure the spike recomputed on every draw, so a scroll or focus move after the press would inflate it. The spike now keeps the first draw after each press, counts renders and shows the previous draw's build time; re-read before trusting any number.
 
 ## Not yet verified (needs the owner's eyes on `/spike`, both surfaces)
 - How `strikethrough` and `dimColor` render in the Desktop Code tab (and on 2.1.295).
