@@ -57,7 +57,7 @@ The plugin sits at the repo root, so the repo itself is the installable mod.
 #### [NEW] `README.md`, `LICENSE`, `.gitignore`, `CHANGELOG.md`
 - [x] README: what it is, install (`claude --plugin-dir .`, then marketplace install), the `/tasks` command, settings, and the differences from the extension listed in User Review Required. Link the extension repo.
 - [x] MIT licence, same holder as the extension.
-- [ ] `.gitignore`: `node_modules/`, `dist/`, `scratch/`, `.claude-plugin/types/`.
+- [x] `.gitignore`: `node_modules/`, `dist/`, `scratch/`, `.claude-plugin/types/`.
 
 #### [NEW] `package.json`, `tsconfig.json`, `vitest.config.ts`
 - [ ] Dev dependencies only (`typescript`, `vitest`, and `esbuild` if the spike needs bundling). Scripts: `test` (vitest on `core/`), `typecheck`, `validate` (`claude plugin validate .`), `test:mod` (`claude plugin test .`).
