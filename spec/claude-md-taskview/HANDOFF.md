@@ -75,4 +75,4 @@ None blocking; see the plan's Open Questions for the decisions made.
 ## Next steps
 1. Done on 2026-10-09: the command is `/md-tasks` only, by the owner's decision. Worth one live run to see it open the pane; the manual checks used the earlier `/tasks`.
 2. Owner's decision, open: install the mod from a marketplace (the folder, or GitHub once pushed) and remove `env.CLAUDE_CODE_PLUGIN_DIRS` from `~/.claude/settings.json`.
-3. Push to `coreyx/claude-md-taskview` so the marketplace install line works, then `prepare-release` when asked.
+3. Release v0.1.0 is prepared (2026-10-09): changelog finalised, `RELEASE_NOTES.md` written, versions already at 0.1.0. The remote `origin` is set to `coreyx/claude-md-taskview`. Not yet done, awaiting the owner's go-ahead: tag `v0.1.0` and push `main` and the tag. The marketplace install line works only once that is pushed.

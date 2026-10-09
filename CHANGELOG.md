@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-09
+
 ### Added
 - **Task pane:** `/md-tasks` opens a pane beside the transcript showing each `spec/*/tasks.md` as a group, with its headings, tasks and sub-tasks nested beneath and `(done/total)` counts.
 - **Toggling:** pressing a task writes its next state to the file, changing one character. The bracket is checked against what the pane drew first; if the file moved on, the list refreshes and nothing is written.
