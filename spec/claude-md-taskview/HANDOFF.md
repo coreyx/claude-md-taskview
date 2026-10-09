@@ -4,7 +4,7 @@
 Repo: `claude-md-taskview` (new, not yet a git repo or on GitHub). Spec: `spec/claude-md-taskview/` (light tier). Phase: plan **`status: approved`** by the owner on 2026-10-08. Nothing is implemented. Product context: the extension's [product.md](https://github.com/coreyx/vscode-md-taskview/blob/main/spec/vscode-md-taskview/product.md).
 
 ## Progress
-No checklist items done. Next is section 0 (platform spike) of [implementation_plan.md](./implementation_plan.md).
+Section 0 (platform spike) of [implementation_plan.md](./implementation_plan.md) is in progress: the import item is done; the four items that need eyes on a real pane (text styles, row press, 150 rows, open-at-line) wait on the owner running `/spike` on both surfaces. The spike is in `scratch/mod-spike/` (untracked, throwaway).
 
 ## Key decisions & rationale
 - **Light tier, with a spike first.** One pane on an understood product; the risk is the week-old mods API, so unknowns are tested before any real code. If relative imports *and* bundling both fail, or the pane is unusable in Desktop, stop and re-triage.
@@ -23,11 +23,18 @@ No checklist items done. Next is section 0 (platform spike) of [implementation_p
 - `userConfig` in `plugin.json` supplies settings; a string field with `options` becomes a picker.
 - Check with `claude plugin validate .` and `claude plugin test .`; develop with `claude --plugin-dir .`.
 
-## Not yet verified (the spike's job)
-- Whether a hooks module can import sibling `.ts` files, or needs bundling.
-- How `strikethrough` actually renders in the Desktop Code tab.
-- Scrolling and redraw cost with 150+ rows.
-- Any workable "open file at line" route.
+## Spike results so far (2026-10-08, Claude Code 2.1.295, Windows)
+- **Relative imports work; no bundling needed.** `hooks/register.tsx` imports `./sibling`, which imports `../core/label` (extensionless, outside `hooks/`). Confirmed by `claude plugin test` and by a real headless session (`claude -p --plugin-dir`) that wrote the imported values to disk. So `hooks.json` points at `./register.tsx` and `esbuild` is not a dependency.
+- **The tree shape validates on `terminal` and `desktop`:** a `plain` `Button` holding three `Text` children (glyph, label, dim count), `strikethrough` + `dimColor`, `color="green"`, a `Markdown` with `onLinkPress`, and 150 such buttons in one `Box`. This is the test kit's validation, not either surface's paint.
+- **`$.process.run(['code', ...])` resolves on Windows with a bare argv** (no `cmd /c` needed): `code --version` exited 0 from a real session. Opening at a line (`code -g path:line`) is not yet tried.
+- **Test kit:** a test must answer the nouns the mod calls. `mock.clock(on)` covers `$.clock`; `$.session.cwd` is answered with `on('session.cwd', () => ({ value: '...' }))` (a hook stub returns a result object, not a bare value). Use `$.clock.now()` for time.
+- A headless run does not lay `.claude-plugin/types/`; type-checking then needs a `tsconfig.json` outside the mod that includes the skill's `claude-code.d.ts`.
+
+## Not yet verified (needs the owner's eyes on `/spike`, both surfaces)
+- How `strikethrough` and `dimColor` actually render in the terminal and the Desktop Code tab.
+- Whether click and Enter both press a plain `Button` row in the Desktop Code tab.
+- Scrolling and redraw cost with 150 rows (the pane shows "redraw began N ms after press").
+- Whether a `Markdown` `file:` link press reaches `onLinkPress`, and whether `code -g path:line` opens the file at the line.
 
 ## Open questions
 None blocking; see the plan's Open Questions for the decisions made.

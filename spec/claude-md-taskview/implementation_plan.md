@@ -41,7 +41,7 @@ The plugin sits at the repo root, so the repo itself is the installable mod.
 ### 0. Platform spike (do first; throwaway)
 
 #### [NEW] `scratch/mod-spike/` (plugin.json, hooks.json, register.tsx)
-- [ ] Confirm a hooks module can `import` a sibling `.ts` file. If not, add an esbuild step that bundles `hooks/register.tsx` and `core/` into one file, and point `hooks.json` at the bundle.
+- [x] Confirm a hooks module can `import` a sibling `.ts` file. If not, add an esbuild step that bundles `hooks/register.tsx` and `core/` into one file, and point `hooks.json` at the bundle.
 - [ ] Draw `Text` with `strikethrough` and `dimColor` on both `terminal` and `desktop` surfaces; record what each shows.
 - [ ] Draw a row as one plain `Button` with `Text` children (glyph, label, dim count) and confirm click and Enter both press it in the Desktop Code tab.
 - [ ] Draw 150 rows; confirm the pane scrolls and note redraw cost.
