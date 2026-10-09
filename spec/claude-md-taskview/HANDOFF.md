@@ -33,14 +33,15 @@ Section 0 (platform spike) of [implementation_plan.md](./implementation_plan.md)
 
 - **Text styles paint as asked on 2.1.289** (owner's report, 2026-10-08; surface taken to be the terminal, not yet confirmed from the pane's first line): plain, `strikethrough`, `dimColor`, the two together, and `color="green"` each draw as named.
 - **On 2.1.289 a fallback row can be pressed, and the pane scrolls with 150 rows** (owner's report, 2026-10-08). Whether "pressed" covered both a click and Enter is not yet stated.
-- **Redraw cost is not yet measured.** The first reading, 4160 ms with 150 rows, came from a figure the spike recomputed on every draw, so a scroll or focus move after the press would inflate it. The spike now keeps the first draw after each press, counts renders and shows the previous draw's build time; re-read before trusting any number.
+- **Redraw cost with 150 rows is small** (owner's reading on 2.1.289, 2026-10-08): the first draw began 6 ms after the press and the previous draw's tree took 3 ms to build, with 7 renders since load. These time the hook, not the surface's paint. An earlier 4160 ms reading was an artefact: that figure was recomputed on every draw, so a scroll after the press inflated it.
+- **`$.process.run(['cmd', '/c', 'code', '-g', 'path:line'])` opens VS Code at the line** (owner's report on 2.1.289, Windows): exit 0 and HANDOFF.md opened at line 14. With the link press above, jump-to-source (section 4) has a working route: `onLinkPress` or a Button, then `code -g`. The bare `['code', '-g', …]` button's result was not reported; `code --version` by bare argv exited 0 on 2.1.295, so try bare first and fall back to `cmd /c` on Windows.
 - **A `Markdown` `file:` link press reaches `onLinkPress` on 2.1.289** (owner's report, 2026-10-08), with the href as written, fragment included: `file:///C:/…/HANDOFF.md#L14`. The surface opened nothing itself, so the mod decides what a press does; path and line can be read back out of the href.
 
 ## Not yet verified (needs the owner's eyes on `/spike`, both surfaces)
 - How `strikethrough` and `dimColor` render in the Desktop Code tab (and on 2.1.295).
 - Whether click and Enter both press a plain `Button` row in the Desktop Code tab.
-- Scrolling and redraw cost with 150 rows (the pane shows "redraw began N ms after press").
-- Whether `$.process.run(['code', '-g', 'path:line'])` opens the file at the line (the two `code -g` buttons), and whether the link press also works in the Desktop Code tab.
+- Scrolling, the link press and `code -g` in the Desktop Code tab (all three hold in the terminal on 2.1.289).
+- Whether the bare `['code', '-g', 'path:line']` argv opens the file on Windows without `cmd /c`.
 
 ## Open questions
 None blocking; see the plan's Open Questions for the decisions made.
