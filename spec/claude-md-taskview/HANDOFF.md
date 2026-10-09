@@ -1,59 +1,73 @@
-# Handoff — 2026-10-08
+# Handoff — 2026-10-09
 
 ## Current state
-Repo: `claude-md-taskview` (new, not yet a git repo or on GitHub). Spec: `spec/claude-md-taskview/` (light tier). Phase: plan **`status: approved`** by the owner on 2026-10-08. Nothing is implemented. Product context: the extension's [product.md](https://github.com/coreyx/vscode-md-taskview/blob/main/spec/vscode-md-taskview/product.md).
+Repo: `claude-md-taskview` (local git repo on `main`, not yet on GitHub). Spec: `spec/claude-md-taskview/` (light tier). Plan **`status: approved`** by the owner on 2026-10-08. Product context: the extension's [product.md](https://github.com/coreyx/vscode-md-taskview/blob/main/spec/vscode-md-taskview/product.md).
 
 ## Progress
-Section 0 (platform spike) of [implementation_plan.md](./implementation_plan.md) is in progress: the import item is done; the four items that need eyes on a real pane (text styles, row press, 150 rows, open-at-line) wait on the owner running `/spike` on both surfaces. The spike is in `scratch/mod-spike/` (untracked, throwaway).
+Section 0 (platform spike) of [implementation_plan.md](./implementation_plan.md) is complete and passed its gate: imports need no bundling, and the pane is usable in the Desktop Code tab. Next is section 1 (repo scaffold). The spike is in `scratch/mod-spike/` (untracked, throwaway).
 
 ## Key decisions & rationale
-- **Light tier, with a spike first.** One pane on an understood product; the risk is the week-old mods API, so unknowns are tested before any real code. If relative imports *and* bundling both fail, or the pane is unusable in Desktop, stop and re-triage.
+- **Light tier, with a spike first.** One pane on an understood product; the risk was the week-old mods API, so unknowns were tested before any real code.
 - **Separate repo, copied parser.** The owner does not want mod code or a refactor in `vscode-md-taskview`. `core/` is copied from it at commit `b591e0f` and adapted; drift is accepted. The upstream parser imports `vscode` (for `Uri`), `fs` and `jsonc-parser`, none of which exist in a hooks module, so each must be removed in the copy. A local clone of the extension normally sits beside this repo at `../vscode-md-taskview`; read from it, never write to it.
-- **Pane opens on `/tasks` only.** Jump-to-source is a nice-to-have (section 3).
+- **Pane opens on `/tasks` only.** Jump-to-source is a nice-to-have (section 4).
+- **Rows keep a fallback** (owner, 2026-10-08): rich rows inside a `try/catch`, string-label rows when the engine refuses them. The minimum version stays 2.1.287. See "Row design by build" below.
 
-## Mods API facts already checked (Claude Code 2.1.295 type definitions)
+## Mods API facts checked against the type definitions
 - Requires Claude Code v2.1.287+. Load the built-in `plugin-authoring` skill before writing mod code; it lays down this build's `claude-code.d.ts` and worked examples (`pane.tsx`, `pane-state.d.ts`). Docs: https://code.claude.com/docs/en/plugins/mods/overview
-- `Text` takes `strikethrough`, `underline`, `dimColor`, `bold`, `italic`, `color`.
+- `Text` takes `strikethrough`, `underline`, `dimColor`, `bold`, `italic`, `color`. A `Button` label takes `dimColor` only.
 - `$.fs` has only `read`, `write`, `list`, `exists`, `stat`. No glob, no watcher, `list` does not recurse. `stat`/`list` return `mtimeMs`.
-- No `setTimeout`/`setInterval`; use `$.clock.every` / `$.clock.after`. A hook has 10 s of its own running time.
-- A `Button` may hold strings and `Text` children only, so a whole tree row can be one plain `Button`.
+- No `setTimeout`/`setInterval`; use `$.clock.every` / `$.clock.after`, and `$.clock.now()` for time. A hook has 10 s of its own running time.
 - `Select` and `Input` exist on terminal and desktop; `Svg` is desktop-only; `Raster`/`Image` terminal-only. An element or prop the surface lacks makes the engine refuse the whole tree, so branch on `e.surface`.
-- `$.state` values must be declared in `types/index.d.ts`; `/clear`, `/resume`, `/branch` reset them and fire `classic.SessionStart`, not `session.start`.
+- `$.state` values must be declared in `types/index.d.ts`; `/clear`, `/resume`, `/branch` reset them and fire `classic.SessionStart`, not `session.start`. A render hook may not write `$.state`.
 - `$.command.register` throws on a name a built-in holds; register last, inside `try/catch`.
 - `userConfig` in `plugin.json` supplies settings; a string field with `options` becomes a picker.
-- Check with `claude plugin validate .` and `claude plugin test .`; develop with `claude --plugin-dir .`.
+- Check with `claude plugin validate .` and `claude plugin test .`; develop with `claude --plugin-dir .`. A Desktop Code tab session loads a folder named in `CLAUDE_CODE_PLUGIN_DIRS` (process environment or the `env` block of `~/.claude/settings.json`).
 
-## Spike results so far (2026-10-08, Claude Code 2.1.295, Windows)
-- **Relative imports work; no bundling needed.** `hooks/register.tsx` imports `./sibling`, which imports `../core/label` (extensionless, outside `hooks/`). Confirmed by `claude plugin test` and by a real headless session (`claude -p --plugin-dir`) that wrote the imported values to disk. So `hooks.json` points at `./register.tsx` and `esbuild` is not a dependency.
-- **The tree shape validates on `terminal` and `desktop`:** a `plain` `Button` holding three `Text` children (glyph, label, dim count), `strikethrough` + `dimColor`, `color="green"`, a `Markdown` with `onLinkPress`, and 150 such buttons in one `Box`. This is the test kit's validation, not either surface's paint.
-- **A `Button` with `Text` children needs a newer build than 2.1.289.** A live 2.1.289 session threw while drawing: `JSX element <Button> needs a label: the label prop, or one string child`. A real 2.1.295 session accepts it on both surfaces (probed in `session.start`), as does 2.1.295's test kit. The first build that allows it, somewhere after 2.1.289 and no later than 2.1.295, is not pinned down. On the older build a row can only be `Text` glyph + `Button` with a string label + `Text` count, and a `Button` label cannot be struck through (it takes `dimColor` only). The throw is synchronous in `h()`, so a `try/catch` around the row's JSX can fall back; the spike does this and names the variant it drew. **Decided by the owner on 2026-10-08: keep the fallback**; the minimum version stays 2.1.287 (plan's Open Questions). The fallback is confirmed live: on 2.1.289 the pane drew and its "rows:" line read `fallback (string label): Error: JSX element <Button> needs a label: the label prop, or one string child`.
-- **`$.process.run(['code', ...])` resolves on Windows with a bare argv** (no `cmd /c` needed): `code --version` exited 0 from a real session. Opening at a line (`code -g path:line`) is not yet tried.
-- **Test kit:** a test must answer the nouns the mod calls. `mock.clock(on)` covers `$.clock`; `$.session.cwd` is answered with `on('session.cwd', () => ({ value: '...' }))` (a hook stub returns a result object, not a bare value). Use `$.clock.now()` for time.
-- A headless run does not lay `.claude-plugin/types/`; type-checking then needs a `tsconfig.json` outside the mod that includes the skill's `claude-code.d.ts`.
+## Spike results (2026-10-08, Windows)
 
-- **Text styles paint as asked on 2.1.289** (owner's report, 2026-10-08; surface taken to be the terminal, not yet confirmed from the pane's first line): plain, `strikethrough`, `dimColor`, the two together, and `color="green"` each draw as named.
-- **On 2.1.289 a mouse click presses a fallback row, and the pane scrolls with 150 rows** (owner's report, 2026-10-08). Enter on a focused row is not yet tried.
-- **A forked session starts without the pane, and without a hot-reloaded mod.** While the owner was moving the focus for the Enter test, a left arrow coincided with the conversation being forked into a new background session (`claude --session-id <new> --fork-session --resume <old>`, seen in the process list at 21:33:44; that the key caused the fork is inferred from timing, not confirmed). The pane was gone and `/spike` was missing, because hot reloading is granted per session id and the fork has a new one, on 2.1.295. For the installed mod this means: a fork is a fresh process, so `session.start` runs and `/tasks` registers again, but the pane is closed and `$.state` is empty, which the plan's `$.store` restore already covers. The spike now traces `ui.focus` and `ui.close` into a "trace:" line to show what a key did.
-- **Redraw cost with 150 rows is small** (owner's reading on 2.1.289, 2026-10-08): the first draw began 6 ms after the press and the previous draw's tree took 3 ms to build, with 7 renders since load. These time the hook, not the surface's paint. An earlier 4160 ms reading was an artefact: that figure was recomputed on every draw, so a scroll after the press inflated it.
-- **`$.process.run(['cmd', '/c', 'code', '-g', 'path:line'])` opens VS Code at the line** (owner's report on 2.1.289, Windows): exit 0 and HANDOFF.md opened at line 14. With the link press above, jump-to-source (section 4) has a working route: `onLinkPress` or a Button, then `code -g`. The bare `['code', '-g', …]` button's result was not reported; `code --version` by bare argv exited 0 on 2.1.295, so try bare first and fall back to `cmd /c` on Windows.
-- **A `Markdown` `file:` link press reaches `onLinkPress` on 2.1.289** (owner's report, 2026-10-08), with the href as written, fragment included: `file:///C:/…/HANDOFF.md#L14`. The surface opened nothing itself, so the mod decides what a press does; path and line can be read back out of the href.
-- **Rich rows work in the terminal on 2.1.295** (owner's report, 2026-10-08): a plain `Button` with `Text` children draws as designed (green glyph, struck-through and dimmed label on done rows, dim count), and Tab onto a row then Enter presses it. With the click result above, both inputs press a row in the terminal.
+### Imports
+- **Relative imports work; no bundling needed.** `hooks/register.tsx` imports `./sibling`, which imports `../core/label` (extensionless, outside `hooks/`). Confirmed by `claude plugin test` and by a real headless session (`claude -p --plugin-dir`, 2.1.295) that wrote the imported values to disk. So `hooks.json` points at `./register.tsx` and `esbuild` is not a dependency.
 
-## Not yet verified (needs the owner's eyes on `/spike`, both surfaces)
-- How `strikethrough` and `dimColor` render in the Desktop Code tab (and on 2.1.295).
-- Whether click and Enter both press a plain `Button` row in the Desktop Code tab.
-- Scrolling, the link press and `code -g` in the Desktop Code tab (all three hold in the terminal on 2.1.289).
+### Row design by build
+- **A `Button` with `Text` children (the rich row) is accepted by 2.1.295 and refused by 2.1.289 and by the Desktop Code tab.** The refusal is a synchronous throw in `h()`: `JSX element <Button> needs a label: the label prop, or one string child`, so a `try/catch` around the row's JSX can fall back.
+- **The desktop app bundles its own engine**, separate from the `claude` on PATH: its process ran from `%APPDATA%\Claude\claude-code\2.1.293\` while the CLI was 2.1.295. That 2.1.293 is the build that drew the Desktop pane is inferred from the process list, not read from the pane. If so, rich rows first work in 2.1.294 or 2.1.295.
+- **So today the Desktop Code tab draws fallback rows:** a `Text` glyph, a `plain` `Button` with a string label, a `Text` count. A done task there is dimmed, not struck through. The terminal on 2.1.295 draws rich rows with strikethrough.
+- 2.1.295's test kit accepts rich rows on both `terminal` and `desktop`, so `claude plugin test` on a current CLI does not exercise the fallback; a test has to force it.
+
+### What the owner saw
+
+| Check | Terminal 2.1.289 (fallback rows) | Terminal 2.1.295 (rich rows) | Desktop Code tab (fallback rows) |
+| --- | --- | --- | --- |
+| `strikethrough`, `dimColor`, both, `color="green"` on `Text` | as named | as designed | as expected |
+| Pane placement | not reported | not reported | `dock`, 62 columns, 48 body rows, beside the transcript |
+| Click presses a row | yes | not reported | yes |
+| Tab then Enter presses a row | not tried | yes | yes |
+| Scrolls with 150 rows | yes | not reported | yes |
+| `Markdown` `file:` link reaches `onLinkPress` | yes, href with `#L14` intact | not tried | not tried |
+| `cmd /c code -g path:line` opens at the line | yes, line 14 | not tried | not tried |
+
+- **Redraw cost with 150 rows is small** (terminal, 2.1.289): the first draw began 6 ms after a press and a tree took 3 ms to build. These time the hook, not the surface's paint. An earlier 4160 ms reading was an artefact of recomputing the figure on every draw.
+- **Jump-to-source has a working route in the terminal:** `onLinkPress` (or a Button) then `$.process.run` of `code -g path:line`. The surface opens nothing itself on a link press, so the mod decides. `['cmd', '/c', 'code', '-g', …]` is confirmed; the bare `['code', '-g', …]` argv was not reported, though `code --version` by bare argv exited 0 on 2.1.295. Try bare first and fall back to `cmd /c` on Windows.
+
+### Sessions
+- **A forked session starts without the pane.** During the Enter test a left arrow coincided with the conversation being forked into a new background session (`claude --session-id <new> --fork-session --resume <old>` in the process list; that the key caused it is inferred from timing). The pane was gone and `/spike` was missing, because hot reloading is granted per session id. For the installed mod a fork is a fresh process: `session.start` runs and `/tasks` registers again, the pane is closed and `$.state` is empty, which the plan's `$.store` restore covers.
+
+### Test kit
+- A test must answer the nouns the mod calls. `mock.clock(on)` covers `$.clock`; `$.session.cwd` is answered with `on('session.cwd', () => ({ value: '...' }))` (a hook stub returns a result object, not a bare value).
+- A headless run does not lay `.claude-plugin/types/`. Once an interactive session has loaded the mod, `tsc -p <mod folder>` type-checks it against the laid types.
+
+## Not yet verified
+- The link press and `code -g` in the Desktop Code tab; section 4 must check them there before it ships.
 - Whether the bare `['code', '-g', 'path:line']` argv opens the file on Windows without `cmd /c`.
+- Which build the Desktop pane ran on, read from the session itself (`$.session.version()`).
 
 ## Open questions
 None blocking; see the plan's Open Questions for the decisions made.
 
-## Files touched this session
-- `spec/claude-md-taskview/implementation_plan.md` (new)
-- `spec/claude-md-taskview/HANDOFF.md` (new)
+## Left in place outside the repo
+- `~/.claude/settings.json` had `env.CLAUDE_CODE_PLUGIN_DIRS` pointed at `scratch/mod-spike` for the Desktop check; removed on 2026-10-09 once the spike finished. Add it again, pointed at the repo root, to try the real mod in the Code tab.
 
 ## Next steps
-1. Owner approves the plan; set `status: approved`.
-2. `git init`, commit the two spec files.
-3. Run `implement-tasks` on `spec/claude-md-taskview/implementation_plan.md`, starting with section 0.
-4. After the spike, update "Not yet verified" here, then continue with sections 1 to 4.
+1. Section 1: repo scaffold. `.gitignore` covers `scratch/`, so the spike stays untracked.
+2. Sections 2 and 3: `core/` copied from `../vscode-md-taskview` at `b591e0f`, then the mod. Rows use the `try/catch` fallback, with a test that forces it.
+3. Section 4: jump-to-source, checked in the Desktop Code tab as well as the terminal.

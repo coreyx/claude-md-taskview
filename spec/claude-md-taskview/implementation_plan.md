@@ -46,11 +46,11 @@ The plugin sits at the repo root, so the repo itself is the installable mod.
 
 #### [NEW] `scratch/mod-spike/` (plugin.json, hooks.json, register.tsx)
 - [x] Confirm a hooks module can `import` a sibling `.ts` file. If not, add an esbuild step that bundles `hooks/register.tsx` and `core/` into one file, and point `hooks.json` at the bundle.
-- [ ] Draw `Text` with `strikethrough` and `dimColor` on both `terminal` and `desktop` surfaces; record what each shows.
-- [ ] Draw a row as one plain `Button` with `Text` children (glyph, label, dim count) and confirm click and Enter both press it in the Desktop Code tab.
+- [x] Draw `Text` with `strikethrough` and `dimColor` on both `terminal` and `desktop` surfaces; record what each shows.
+- [x] Draw a row as one plain `Button` with `Text` children (glyph, label, dim count) and confirm click and Enter both press it in the Desktop Code tab. (The Desktop Code tab refused `Text` children and drew the string-label fallback; click and Enter both press that. See HANDOFF.)
 - [x] Draw 150 rows; confirm the pane scrolls and note redraw cost.
 - [x] Test a `Markdown` `file:` link with `onLinkPress`, and `$.process.run(['code', '-g', 'path:line'])`, for section 3.
-- [ ] Write the results into `HANDOFF.md` (and any new question into Open Questions) before starting section 1.
+- [x] Write the results into `HANDOFF.md` (and any new question into Open Questions) before starting section 1.
 
 ### 1. Repo scaffold
 
