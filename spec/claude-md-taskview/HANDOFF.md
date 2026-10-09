@@ -25,7 +25,7 @@ Every item in [implementation_plan.md](./implementation_plan.md) is checked off,
 - **`types/index.d.ts` must be self-contained:** no `import`, `export … from`, `require` or reference.
 - **A hook sees `$.fs` paths already resolved** to absolute paths with the platform's separators, whatever the mod passed. A test's `fs.*` stubs have to match on that.
 - **`claude plugin test .` runs every `*.test.ts` under the folder**, `scratch/` included, and such a file may import only its own files and `claude-code`. Anything for vitest must be named otherwise.
-- **Claude Code has a built-in `/tasks`, and registering the same name does not throw.** In the Desktop Code tab the mod's `/tasks` registered beside it: the list shows two `/tasks` entries and `/md-tasks` is never registered (owner's report, 2026-10-09). Headless, the built-in reports "isn't available in this environment" and the mod's own answers. So the `try/catch` fallback to `/md-tasks` has not been seen to fire on any build tried, despite the type definitions saying a built-in's name throws.
+- **Claude Code has a built-in `/tasks`, and registering the same name does not throw.** In the Desktop Code tab the mod's `/tasks` registered beside it: the list shows two `/tasks` entries and `/md-tasks` is never registered (owner's report, 2026-10-09). Headless, the built-in reports "isn't available in this environment" and the mod's own answers. So a fallback on a thrown registration never fired on any build tried, despite the type definitions saying a built-in's name throws. The mod therefore registers `/md-tasks` only (owner's decision, 2026-10-09).
 - Check with `claude plugin validate .` and `claude plugin test .`; develop with `claude --plugin-dir .`. A Desktop Code tab session loads a folder named in `CLAUDE_CODE_PLUGIN_DIRS` (process environment or the `env` block of `~/.claude/settings.json`).
 
 ## Spike results (2026-10-08, Windows)
@@ -73,6 +73,6 @@ None blocking; see the plan's Open Questions for the decisions made.
 - `~/.claude/settings.json` has `env.CLAUDE_CODE_PLUGIN_DIRS` pointed at the repo root (set on 2026-10-09 for the manual checks). It loads the mod in every new session. It is a development switch, not the install: remove it once the mod is installed from a marketplace.
 
 ## Next steps
-1. Owner's decision, open: keep `/tasks` beside the built-in, or register `/md-tasks` only (recommended; see the walkthrough's Follow-ups).
+1. Done on 2026-10-09: the command is `/md-tasks` only, by the owner's decision. Worth one live run to see it open the pane; the manual checks used the earlier `/tasks`.
 2. Owner's decision, open: install the mod from a marketplace (the folder, or GitHub once pushed) and remove `env.CLAUDE_CODE_PLUGIN_DIRS` from `~/.claude/settings.json`.
 3. Push to `coreyx/claude-md-taskview` so the marketplace install line works, then `prepare-release` when asked.

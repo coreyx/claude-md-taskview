@@ -34,6 +34,10 @@ None blocking. Decided on 2026-10-08:
 
 The spike (section 0) may add questions; record them here before starting section 1.
 
+Changed after implementation, decided on 2026-10-09:
+
+- **Command name: `/md-tasks` only.** This replaces "`/tasks`, falling back to `/md-tasks`" above and in section 3. Claude Code has a built-in `/tasks`, and registering the name again did not fail: the Desktop Code tab listed two `/tasks` entries and the fallback never applied. The owner chose a name of the mod's own.
+
 Raised by the spike, decided on 2026-10-08:
 
 - **Minimum Claude Code version for task rows: keep a fallback.** A `Button` holding `Text` children (the row design in section 3) is refused by 2.1.289 and accepted by 2.1.295. Rows are drawn that way inside a `try/catch`; when the engine throws, the row falls back to a `Text` glyph, a `Button` with a string label and a `Text` count, so builds from 2.1.287 still get a working pane. On those builds a done task's label is dimmed but not struck through, since a `Button` label takes `dimColor` only. The minimum version stays 2.1.287.

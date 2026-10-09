@@ -136,7 +136,7 @@ for (const surface of SURFACES) {
     expect((await ui.find({ key: 'h-0-0' }))?.text).toContain('Milestone 1: Setup (2/3)');
     // Bold markers are stripped by the copied parser, whose lookbehind patterns must run in this engine.
     expect((await ui.find({ key: 't-0-1' }))?.text).toContain('Scaffold the project');
-    expect(disk.commands).toEqual(['tasks']);
+    expect(disk.commands).toEqual(['md-tasks']);
     await ui.unmount();
   });
 
@@ -355,24 +355,33 @@ test('opening falls back to "cmd /c code", but never for a path cmd could misrea
   await ui.unmount();
 });
 
-test('falls back to /md-tasks and leaves a built-in /tasks alone', async ($, on) => {
-  const disk = world(on, { [AUTH_PATH]: AUTH }, ['tasks']);
-  await $.session.start({ cwd: CWD, surface: 'terminal', isInteractive: true });
+// As the engine raises a command the person typed.
+const typed = (command: string) => ({
+  command,
+  args: '',
+  origin: { kind: 'composer' as const },
+  presentation: { isFullscreen: true, columns: 120 },
+});
 
-  // As the engine raises a command the person typed.
-  const typed = (command: string) => ({
-    command,
-    args: '',
-    origin: { kind: 'composer' as const },
-    presentation: { isFullscreen: true, columns: 120 },
-  });
+test("registers /md-tasks only, and leaves Claude Code's own /tasks alone", async ($, on) => {
+  const disk = world(on, { [AUTH_PATH]: AUTH });
+  await $.session.start({ cwd: CWD, surface: 'terminal', isInteractive: true });
 
   expect(disk.commands).toEqual(['md-tasks']);
   expect(await $.command.run(typed('tasks'))).toMatchObject({ text: 'built-in /tasks' });
   expect(disk.opened).toEqual([]);
 
-  await $.command.run(typed('md-tasks'));
+  expect(await $.command.run(typed('md-tasks'))).toEqual({});
   expect(disk.opened).toEqual(['md-tasks']);
+});
+
+test('does not answer /md-tasks when the name could not be registered', async ($, on) => {
+  const disk = world(on, { [AUTH_PATH]: AUTH }, ['md-tasks']);
+  await $.session.start({ cwd: CWD, surface: 'terminal', isInteractive: true });
+
+  expect(disk.commands).toEqual([]);
+  expect(await $.command.run(typed('md-tasks'))).toMatchObject({ text: 'built-in /md-tasks' });
+  expect(disk.opened).toEqual([]);
 });
 
 test('a build that refuses Text inside a Button gets string-label rows', () => {

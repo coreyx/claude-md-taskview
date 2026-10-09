@@ -16,6 +16,7 @@ type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : never) : never;
 export const contractMatchesCore: Same<SpecGroup, ContractSpecGroup> = true;
 
 const PANE = 'md-tasks';
+const COMMAND = 'md-tasks';
 const POLL_MS = 1500;
 const INDENT = '  ';
 const OPEN_TIMEOUT_MS = 15000;
@@ -100,8 +101,8 @@ export function drawPressable(el: RowElements, row: Pressable, nesting: { isRefu
 /** What the module keeps between events, beside the sync session. */
 interface Mod {
   session: Session;
-  /** The command name that registered: `tasks`, or `md-tasks` when a built-in holds that. */
-  commandName: string | undefined;
+  /** True once `/md-tasks` registered as this mod's; until then a command of that name is someone else's. */
+  hasCommand: boolean;
   /** The `$.store` key this folder's view is saved under. */
   viewKey: string;
   /** Per surface, whether the build refused Text inside a Button. */
@@ -180,19 +181,22 @@ async function setTaskState($: EngineInterface, mod: Mod, task: TaskNode, nextCh
   }
 }
 
-/** Registers `/tasks`, or `/md-tasks` when a built-in holds that name. */
+/**
+ * Registers `/md-tasks`.
+ *
+ * Not `/tasks`: Claude Code has a command of that name, and registering it
+ * again does not fail, it lists a second `/tasks` beside the built-in one.
+ */
 async function registerCommand($: EngineInterface, mod: Mod): Promise<void> {
-  const description = 'Show the Markdown task tree of this folder in a pane';
   try {
-    await $.command.register({ name: 'tasks', description, immediate: true });
-    mod.commandName = 'tasks';
-  } catch {
-    try {
-      await $.command.register({ name: 'md-tasks', description, immediate: true });
-      mod.commandName = 'md-tasks';
-    } catch {
-      $.ui.log('Markdown Tasks: neither /tasks nor /md-tasks could be registered');
-    }
+    await $.command.register({
+      name: COMMAND,
+      description: 'Show the Markdown task tree of this folder in a pane',
+      immediate: true,
+    });
+    mod.hasCommand = true;
+  } catch (failure) {
+    $.ui.log(`Markdown Tasks: /${COMMAND} could not be registered (${failure instanceof Error ? failure.message : failure})`);
   }
 }
 
@@ -234,7 +238,7 @@ async function openPane($: EngineInterface, mod: Mod): Promise<{ text?: string }
 export const register: Register = (on, options) => {
   const mod: Mod = {
     session: createSession(readSettings(options)),
-    commandName: undefined,
+    hasCommand: false,
     viewKey: 'view',
     nestingBySurface: new Map(),
   };
@@ -261,15 +265,9 @@ export const register: Register = (on, options) => {
     return next(e);
   });
 
-  // Only the name this mod registered is its own: the other may be a built-in's.
-  on('command.run', { command: 'tasks' }, async ($, e, next) => {
-    if (mod.commandName !== 'tasks') return next(e);
-
-    return openPane($, mod);
-  });
-
-  on('command.run', { command: 'md-tasks' }, async ($, e, next) => {
-    if (mod.commandName !== 'md-tasks') return next(e);
+  on('command.run', { command: COMMAND }, async ($, e, next) => {
+    // If the name could not be registered, a command called this is not the mod's to answer.
+    if (!mod.hasCommand) return next(e);
 
     return openPane($, mod);
   });

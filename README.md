@@ -27,9 +27,7 @@ The Desktop Code tab takes no `--plugin-dir` flag. To try a clone there, name it
 
 ## Use
 
-Run `/tasks` in a folder that holds `spec/<name>/tasks.md` files. The pane opens beside the transcript; it never opens by itself.
-
-Claude Code has a `/tasks` of its own, so the command list may show two entries of that name: pick the one described as "Show the Markdown task tree of this folder in a pane". Where Claude Code refuses the name instead, the mod registers `/md-tasks`.
+Run `/md-tasks` in a folder that holds `spec/<name>/tasks.md` files. The pane opens beside the transcript; it never opens by itself.
 
 - Each spec folder is a group, with its headings and tasks nested beneath it and a `(done/total)` count.
 - Press a group or a heading to collapse or expand it.

@@ -42,7 +42,7 @@ Each of these was forced by the platform or is a small correction; the plan's ch
 - **`$` cannot cross an import, or enter a closure.** `claude plugin validate` refuses a mod that passes `$` to an imported function or to one not declared at the top of the hooks module. So `discover` and `refresh` take closures over `$` (`Disk`, `Host`) instead of `$`, the atoms live in `hooks/register.tsx`, and every helper that takes `$` is a top-level function there.
 - **The state contract must be self-contained.** `types/index.d.ts` may not import, so it repeats the types in `core/types.ts`. A type-level check in `hooks/register.tsx` stops compiling if the two drift.
 - **The vitest file is `core/core.spec.ts`, not `core/core.test.ts`.** `claude plugin test .` runs every `*.test.ts` under the folder and cannot import vitest.
-- **The command is `/tasks`, listed beside Claude Code's own `/tasks`.** In the Desktop Code tab the mod's `/tasks` registered even though a built-in of that name exists: the command list shows two `/tasks` entries, and `/md-tasks` is not registered (owner's report, 2026-10-09). So registering a name a built-in holds did not throw there, and the planned fallback did not apply. The mod's hook answers only its own entry. The command also works in the terminal; whether its list shows the same two entries was not said.
+- **The command is `/md-tasks`, not `/tasks`.** The plan asked for `/tasks` with `/md-tasks` as the fallback when a built-in holds the name. Claude Code does have a built-in `/tasks`, but registering the name again did not throw: in the Desktop Code tab the list showed two `/tasks` entries and the fallback never applied (owner's report, 2026-10-09). The owner then chose `/md-tasks` only, recorded in the plan's Open Questions. The manual verification below was run with the earlier `/tasks`; only the name has changed since, and `/md-tasks` has been run in the test kit, not yet in a live session.
 - **`replaceStateChar` takes an optional fifth argument, the parsed line.** Columns alone cannot tell two tasks apart when a line is inserted above: the second task's bracket would slide to where the first was parsed, and the wrong task would be ticked. The mod passes the line and refuses the write when it differs.
 - **Extra files and state:** `hooks/rows.ts` and `hooks/settings.ts`, and a `focused` state value the state picker follows.
 - **No `MultiEdit` hook:** this build has no such tool; `Edit` and `Write` are matched.
@@ -60,18 +60,18 @@ The plan's verification is two suites rather than one scratch script.
 - `parseJsonc` reads the extension's `obsidian.jsonc` to the Obsidian template: **Passed**, comparing every field but `description` (see above)
 - State templates, `validateTemplate` and `isMilestoneHeading`: **Passed**
 
-`npm run test:mod` (`claude plugin test .`, `hooks/register.test.ts`), 24 tests, the pane tests run once per surface on `terminal` and `desktop`:
+`npm run test:mod` (`claude plugin test .`, `hooks/register.test.ts`), 25 tests, the pane tests run once per surface on `terminal` and `desktop`:
 - Two spec folders draw as two groups with correct `(done/total)`: **Passed**
 - Pressing a task writes the file with one bracket character changed, and the row redraws done: **Passed**
 - Pressing a heading hides its tasks and writes the collapsed id to `$.store`: **Passed**
 - "Hide completed" removes done tasks and leaves the counts: **Passed**
 - A changed modification time on the next tick triggers a re-read; an unchanged one does not: **Passed**
 - A stale bracket position produces a toast and no write: **Passed**
-- The saved view returns after `/clear`; the empty state; the state picker with the Obsidian template; the open control; the `cmd /c` fallback and its refusal of a path `cmd` could misread; Claude's own edit refreshing at once; the fallback to `/md-tasks`; the string-label row fallback: **Passed**
+- The saved view returns after `/clear`; the empty state; the state picker with the Obsidian template; the open control; the `cmd /c` fallback and its refusal of a path `cmd` could misread; Claude's own edit refreshing at once; `/md-tasks` registering alone and leaving `/tasks` to Claude Code; not answering `/md-tasks` when the name could not be registered; the string-label row fallback: **Passed**
 
 Also:
 - `claude plugin validate .`: **Passed**, no refusals.
-- Type-check against Claude Code 2.1.295's type definitions: **Passed**. This used a `tsconfig` under `scratch/` that names the skill's copy of the definitions, because `npm run typecheck` needs `.claude-plugin/types/`, which only an interactive load of the mod lays down. `npm run typecheck` itself has not been run.
+- Type-check: **Passed** twice over. `npm run typecheck` passes against the definitions the Desktop app's engine (2.1.293) laid in `.claude-plugin/types/`, and a `tsconfig` under `scratch/` checks the same code against 2.1.295's.
 - The mod loads in a real headless session (`claude -p --plugin-dir .`) with no load error: **Passed**.
 
 What the automated tests do not show: the test kit checks the tree each surface is handed, not what it paints, and 2.1.295's kit accepts the rich rows, so the fallback is exercised only through `drawPressable` with a stand-in element table.
@@ -80,11 +80,9 @@ What the automated tests do not show: the test kit checks the tree each surface 
 There was no earlier code in this repo. The extension repo at `../vscode-md-taskview` was only read: `git status` there is clean and its head is still `b591e0f`.
 
 ## Manual Verification
-**Done on both surfaces.** On 2026-10-09 the owner ran these in the Desktop Code tab and in a terminal session, with the mod loaded through `CLAUDE_CODE_PLUGIN_DIRS`, and reported that all of them passed in the Code tab and that the terminal run "worked perfectly". In the Code tab the pane opened from the mod's `/tasks` entry; how the command list looked in the terminal was not said. `npm run typecheck` (step 10) is the one step not reported.
+**Done on both surfaces.** On 2026-10-09 the owner ran these in the Desktop Code tab and in a terminal session, with the mod loaded through `CLAUDE_CODE_PLUGIN_DIRS`, and reported that all of them passed in the Code tab and that the terminal run "worked perfectly". That run used the mod's `/tasks` entry, before the command became `/md-tasks`. Step 10 was run afterwards: `npm run typecheck` passes against the types the Desktop app's engine (2.1.293) laid down.
 
-In each, pick the mod's entry if two `/tasks` are listed, or use `/md-tasks` if that is what registered.
-
-1. In the coreystruzan.com repo, run `claude --plugin-dir <path to claude-md-taskview>`, then `/md-tasks`. The pane should show "Implementation Tasks" with 48/48 and the five milestones with the counts in the blog screenshots. Note which command name worked.
+1. In the coreystruzan.com repo, run `claude --plugin-dir <path to claude-md-taskview>`, then `/md-tasks`. The pane should show "Implementation Tasks" with 48/48 and the five milestones with the counts in the blog screenshots.
 2. Open the same folder in the Claude Desktop Code tab, with `CLAUDE_CODE_PLUGIN_DIRS` set to the repo's absolute path, and run the command. The pane should dock beside the transcript and match step 1. Expect dimmed, not struck-through, completed tasks there until the app bundles a newer engine.
 3. Click a completed task; `git diff` on `tasks.md` should show a one-character change. Click it back; `git diff` should be empty.
 4. Edit a checkbox in `tasks.md` in another editor; the pane should update within about 2 seconds.
@@ -96,7 +94,6 @@ In each, pick the mod's entry if two `/tasks` are listed, or use `/md-tasks` if 
 10. Run `npm run typecheck` after step 1 has laid `.claude-plugin/types/`.
 
 ## Follow-ups
-- **Command name.** Two `/tasks` entries in one list is easy to mis-pick. Registering `/md-tasks` only would give the mod a name of its own in every kind of session; that reverses the plan's decision, so it is the owner's call.
 - **Open control and keyboard use.** One `↗` per row doubles the stops in the focus ring. If step 9 is awkward, alternatives are one toolbar "Open" acting on the focused row, or showing the control only on the focused row.
 - **Strikethrough on older builds.** The fallback dims a completed task. The extension strikes labels through with the combining character U+0336, which would also work in a string label; it was not tried here.
 - **Editor.** Jump-to-source opens VS Code only. A setting for another editor's command is the natural extension.

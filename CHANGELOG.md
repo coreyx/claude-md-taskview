@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **Task pane:** `/md-tasks` (or `/tasks`, where no built-in holds that name) opens a pane beside the transcript showing each `spec/*/tasks.md` as a group, with its headings, tasks and sub-tasks nested beneath and `(done/total)` counts.
+- **Task pane:** `/md-tasks` opens a pane beside the transcript showing each `spec/*/tasks.md` as a group, with its headings, tasks and sub-tasks nested beneath and `(done/total)` counts.
 - **Toggling:** pressing a task writes its next state to the file, changing one character. The bracket is checked against what the pane drew first; if the file moved on, the list refreshes and nothing is written.
 - **Live sync:** the pane re-reads a task file within about two seconds of a change on disk, and at once after Claude's own edit to one.
 - **Milestones:** headings matching a milestone keyword show a flag, filled when every task beneath is done.
