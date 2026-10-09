@@ -1,0 +1,67 @@
+{
+  // Obsidian Tasks plugin multi-state task conventions
+  "name": "Obsidian Tasks",
+  "description": "Supports Obsidian Tasks multi-state checklist conventions",
+  "defaultState": " ",
+  "states": [
+    {
+      "char": " ",
+      "id": "not_started",
+      "label": "Not Started",
+      "icon": "circle-large-outline",
+      "strikethrough": false,
+      "countsAsCompleted": false,
+      "nextState": "/"
+    },
+    {
+      "char": "/",
+      "id": "in_progress",
+      "label": "In Progress",
+      "icon": "sync",
+      "color": "charts.yellow",
+      "strikethrough": false,
+      "countsAsCompleted": false,
+      "nextState": "x"
+    },
+    {
+      "char": "x",
+      "id": "done",
+      "label": "Done",
+      "icon": "pass-filled",
+      "color": "charts.green",
+      "strikethrough": true,
+      "countsAsCompleted": true,
+      "nextState": " "
+    },
+    {
+      "char": "-",
+      "id": "cancelled",
+      "label": "Cancelled",
+      "icon": "circle-slash",
+      "color": "disabledForeground",
+      "strikethrough": true,
+      "countsAsCompleted": false,
+      "nextState": " "
+    },
+    {
+      "char": "?",
+      "id": "clarification",
+      "label": "Needs Clarification",
+      "icon": "question",
+      "color": "charts.purple",
+      "strikethrough": false,
+      "countsAsCompleted": false,
+      "nextState": " "
+    },
+    {
+      "char": "!",
+      "id": "important",
+      "label": "Important",
+      "icon": "warning",
+      "color": "charts.red",
+      "strikethrough": false,
+      "countsAsCompleted": false,
+      "nextState": " "
+    }
+  ]
+}

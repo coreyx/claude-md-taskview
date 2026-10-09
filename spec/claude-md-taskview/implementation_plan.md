@@ -65,7 +65,7 @@ The plugin sits at the repo root, so the repo itself is the installable mod.
 ### 2. Core (copied from the extension; no `vscode`, no Node APIs)
 
 #### [NEW] `core/UPSTREAM.md`
-- [ ] Record source repo, commit `b591e0f`, each upstream file copied and what was changed in it.
+- [x] Record source repo, commit `b591e0f`, each upstream file copied and what was changed in it.
 
 #### [NEW] `core/types.ts`
 - [x] From `src/models/types.ts`: `BracketRange`, `StateDefinition`, `TaskStats`, `TaskNode`, `HeadingNode`, `SpecGroup`, `TaskTreeNode`, with `fileUri`/`folderUri`/`taskFileUri` replaced by string paths `filePath`/`folderPath`/`taskFilePath`.
