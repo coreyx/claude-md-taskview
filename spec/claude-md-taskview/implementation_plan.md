@@ -100,8 +100,8 @@ The plugin sits at the repo root, so the repo itself is the installable mod.
 - [x] Declare `PluginState['md-taskview']`: `groups: SpecGroup[]`, `collapsed: string[]`, `hideCompleted: boolean`, `error: string | null`. (The contract must be self-contained, so it repeats the types of `core/types.ts`; a type check in `hooks/register.tsx` fails if the two drift. It also holds `focused: string | null`, the task row the state picker follows.)
 
 #### [NEW] `hooks/discover.ts`
-- [ ] `discover($, options)`: expand `specPathPattern` one `*` segment at a time with `$.fs.list` (it does not recurse and there is no glob), keep directories containing `taskFileName`, return `{ name, folderPath, taskFilePath, mtimeMs }[]` sorted by name.
-- [ ] Skip `node_modules`, `dist`, `.git`.
+- [x] `discover($, options)`: expand `specPathPattern` one `*` segment at a time with `$.fs.list` (it does not recurse and there is no glob), keep directories containing `taskFileName`, return `{ name, folderPath, taskFilePath, mtimeMs }[]` sorted by name. (It takes closures over `$.fs` rather than `$`: Claude Code refuses a mod that passes `$` into an imported file. Settings are read by `hooks/settings.ts`.)
+- [x] Skip `node_modules`, `dist`, `.git`.
 
 #### [NEW] `hooks/sync.ts`
 - [ ] `refresh($)`: discover, `$.fs.read` each task file, `parseTasks`, write the `groups` atom. On a read or parse error set `error` and keep the previous groups.
