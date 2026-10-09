@@ -13,13 +13,13 @@
     "specPathPattern": {
       "type": "string",
       "title": "Spec path pattern",
-      "description": "Where spec folders are, relative to the working directory. * matches one folder level.",
+      "description": "Where spec folders are, relative to the working directory. * matches one folder level. Leave empty for the default: spec/*",
       "default": "spec/*"
     },
     "taskFileName": {
       "type": "string",
       "title": "Task file name",
-      "description": "File name containing task definitions inside each spec folder.",
+      "description": "File name containing task definitions inside each spec folder. Leave empty for the default: tasks.md",
       "default": "tasks.md"
     },
     "stateTemplate": {
@@ -32,7 +32,7 @@
     "customTemplatePath": {
       "type": "string",
       "title": "Custom template path",
-      "description": "Path to a custom *.jsonc state template file (used when the state template is Custom).",
+      "description": "Path to a custom *.jsonc state template file, used when the state template is Custom. Leave empty otherwise.",
       "default": ""
     },
     "strikeThroughCompleted": {
@@ -62,7 +62,7 @@
     "milestoneKeywords": {
       "type": "string",
       "title": "Milestone keywords",
-      "description": "Comma-separated keywords that mark a heading as a milestone.",
+      "description": "Comma-separated keywords that mark a heading as a milestone. Leave empty for the default: Milestone, Release, Alpha, Beta",
       "default": "Milestone, Release, Alpha, Beta"
     }
   }

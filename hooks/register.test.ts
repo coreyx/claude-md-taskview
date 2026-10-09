@@ -355,6 +355,27 @@ test('opening falls back to "cmd /c code", but never for a path cmd could misrea
   await ui.unmount();
 });
 
+test(
+  'settings typed loosely at install still find the specs',
+  { options: { specPathPattern: '/spec/*', milestoneKeywords: 'Milestone' } },
+  async ($, on) => {
+    world(on, { [AUTH_PATH]: AUTH });
+    await $.session.start({ cwd: CWD, surface: 'terminal', isInteractive: true });
+    const ui = await $.ui.mount({
+      plugin: 'md-taskview',
+      surface: 'terminal',
+      component: 'Pane',
+      requestId: 'md-tasks',
+      props: PANE,
+    });
+
+    // A leading slash is not an absolute path here: the pattern is always relative to the working directory.
+    expect((await ui.find({ key: 'g-0' }))?.text).toContain('auth (2/3)');
+    expect((await ui.find({ key: 'h-0-0' }))?.text).toContain('⚐');
+    await ui.unmount();
+  },
+);
+
 // As the engine raises a command the person typed.
 const typed = (command: string) => ({
   command,

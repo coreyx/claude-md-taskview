@@ -43,6 +43,8 @@ The pane re-reads a task file within about two seconds of it changing on disk, a
 
 Set these in the mod's configuration (`/config`, or `pluginConfigs` in settings). They mirror the extension's settings of the same names.
 
+The dialog shown at install does not fill in the defaults of the text settings: those fields start empty. Leave one empty and its default applies; you do not have to type it.
+
 | Setting | Default | Description |
 | :--- | :--- | :--- |
 | `specPathPattern` | `spec/*` | Where spec folders are, relative to the working directory. `*` matches one folder level. |
