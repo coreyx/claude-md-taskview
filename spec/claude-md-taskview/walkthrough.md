@@ -2,7 +2,7 @@
 
 A Claude Code mod, `md-taskview`, that draws the `spec/*/tasks.md` milestone and task tree in a pane beside the transcript. Pressing a task writes its next state to disk; the pane follows the files as they change. The parser is a copy of the VS Code extension's, at commit `b591e0f`.
 
-Everything automated passes. Nothing has yet been seen running as the finished mod in a live pane: the manual steps below are still to do.
+Everything automated passes, and the owner has run the manual steps in both the terminal and the Desktop Code tab.
 
 ## What Was Implemented
 
@@ -42,7 +42,7 @@ Each of these was forced by the platform or is a small correction; the plan's ch
 - **`$` cannot cross an import, or enter a closure.** `claude plugin validate` refuses a mod that passes `$` to an imported function or to one not declared at the top of the hooks module. So `discover` and `refresh` take closures over `$` (`Disk`, `Host`) instead of `$`, the atoms live in `hooks/register.tsx`, and every helper that takes `$` is a top-level function there.
 - **The state contract must be self-contained.** `types/index.d.ts` may not import, so it repeats the types in `core/types.ts`. A type-level check in `hooks/register.tsx` stops compiling if the two drift.
 - **The vitest file is `core/core.spec.ts`, not `core/core.test.ts`.** `claude plugin test .` runs every `*.test.ts` under the folder and cannot import vitest.
-- **The command is `/tasks`, listed beside Claude Code's own `/tasks`.** In the Desktop Code tab the mod's `/tasks` registered even though a built-in of that name exists: the command list shows two `/tasks` entries, and `/md-tasks` is not registered (owner's report, 2026-10-09). So registering a name a built-in holds did not throw there, and the planned fallback did not apply. The mod's hook answers only its own entry. Whether the terminal behaves the same is not yet reported.
+- **The command is `/tasks`, listed beside Claude Code's own `/tasks`.** In the Desktop Code tab the mod's `/tasks` registered even though a built-in of that name exists: the command list shows two `/tasks` entries, and `/md-tasks` is not registered (owner's report, 2026-10-09). So registering a name a built-in holds did not throw there, and the planned fallback did not apply. The mod's hook answers only its own entry. The command also works in the terminal; whether its list shows the same two entries was not said.
 - **`replaceStateChar` takes an optional fifth argument, the parsed line.** Columns alone cannot tell two tasks apart when a line is inserted above: the second task's bracket would slide to where the first was parsed, and the wrong task would be ticked. The mod passes the line and refuses the write when it differs.
 - **Extra files and state:** `hooks/rows.ts` and `hooks/settings.ts`, and a `focused` state value the state picker follows.
 - **No `MultiEdit` hook:** this build has no such tool; `Edit` and `Write` are matched.
@@ -80,7 +80,7 @@ What the automated tests do not show: the test kit checks the tree each surface 
 There was no earlier code in this repo. The extension repo at `../vscode-md-taskview` was only read: `git status` there is clean and its head is still `b591e0f`.
 
 ## Manual Verification
-**Desktop Code tab: done.** On 2026-10-09 the owner ran these there, with the mod loaded through `CLAUDE_CODE_PLUGIN_DIRS`, and reported that all of them passed; the pane opened from the mod's `/tasks` entry. The terminal run has not been reported.
+**Done on both surfaces.** On 2026-10-09 the owner ran these in the Desktop Code tab and in a terminal session, with the mod loaded through `CLAUDE_CODE_PLUGIN_DIRS`, and reported that all of them passed in the Code tab and that the terminal run "worked perfectly". In the Code tab the pane opened from the mod's `/tasks` entry; how the command list looked in the terminal was not said. `npm run typecheck` (step 10) is the one step not reported.
 
 In each, pick the mod's entry if two `/tasks` are listed, or use `/md-tasks` if that is what registered.
 

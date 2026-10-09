@@ -4,7 +4,7 @@
 Repo: `claude-md-taskview` (local git repo on `main`, not yet on GitHub). Spec: `spec/claude-md-taskview/` (light tier). Plan **`status: approved`** by the owner on 2026-10-08. Product context: the extension's [product.md](https://github.com/coreyx/vscode-md-taskview/blob/main/spec/vscode-md-taskview/product.md).
 
 ## Progress
-Every item in [implementation_plan.md](./implementation_plan.md) is checked off, sections 0 to 4, and [walkthrough.md](./walkthrough.md) is written. Both test suites, `claude plugin validate .` and the type-check pass. The owner ran the walkthrough's manual steps in the Desktop Code tab on 2026-10-09 and reported that all passed; the terminal run is not yet reported. The spike is still in `scratch/mod-spike/` (untracked, throwaway).
+Every item in [implementation_plan.md](./implementation_plan.md) is checked off, sections 0 to 4, and [walkthrough.md](./walkthrough.md) is written. Both test suites, `claude plugin validate .` and the type-check pass. The owner ran the walkthrough's manual steps on 2026-10-09 in the Desktop Code tab and in the terminal, and reported that both passed. The spike is still in `scratch/mod-spike/` (untracked, throwaway).
 
 ## Key decisions & rationale
 - **Light tier, with a spike first.** One pane on an understood product; the risk was the week-old mods API, so unknowns were tested before any real code.
@@ -73,6 +73,6 @@ None blocking; see the plan's Open Questions for the decisions made.
 - `~/.claude/settings.json` has `env.CLAUDE_CODE_PLUGIN_DIRS` pointed at the repo root (set on 2026-10-09 for the manual checks). It loads the mod in every new session. It is a development switch, not the install: remove it once the mod is installed from a marketplace.
 
 ## Next steps
-1. The owner runs the manual verification in [walkthrough.md](./walkthrough.md), in the terminal and the Desktop Code tab, and reports what the pane shows and which command name registered.
-2. Fix what that turns up. The likeliest decisions are in the walkthrough's Follow-ups: the command name, and whether one `↗` per row is tolerable from the keyboard.
+1. Owner's decision, open: keep `/tasks` beside the built-in, or register `/md-tasks` only (recommended; see the walkthrough's Follow-ups).
+2. Owner's decision, open: install the mod from a marketplace (the folder, or GitHub once pushed) and remove `env.CLAUDE_CODE_PLUGIN_DIRS` from `~/.claude/settings.json`.
 3. Push to `coreyx/claude-md-taskview` so the marketplace install line works, then `prepare-release` when asked.
