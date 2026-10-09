@@ -71,8 +71,8 @@ The plugin sits at the repo root, so the repo itself is the installable mod.
 - [x] From `src/models/types.ts`: `BracketRange`, `StateDefinition`, `TaskStats`, `TaskNode`, `HeadingNode`, `SpecGroup`, `TaskTreeNode`, with `fileUri`/`folderUri`/`taskFileUri` replaced by string paths `filePath`/`folderPath`/`taskFilePath`.
 
 #### [NEW] `core/parse.ts`
-- [ ] From `src/parser/MarkdownASTParser.ts`: `parseTasks(content, specName, filePath, folderPath, template)` and `stripMarkdownFormatting`. The template is a parameter; no singleton.
-- [ ] Drop heading slugs (`Slugifier`), which only served Markdown-preview navigation.
+- [x] From `src/parser/MarkdownASTParser.ts`: `parseTasks(content, specName, filePath, folderPath, template)` and `stripMarkdownFormatting`. The template is a parameter; no singleton.
+- [x] Drop heading slugs (`Slugifier`), which only served Markdown-preview navigation.
 
 #### [NEW] `core/templates.ts`
 - [x] From `src/templates/StateTemplateEngine.ts`: `STANDARD_TEMPLATE`, `OBSIDIAN_TEMPLATE`, and pure `getState(template, char)` / `getNextState(template, char)` / `validateTemplate(obj)`.
