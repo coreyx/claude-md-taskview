@@ -18,7 +18,7 @@ The two copies are kept in step by hand. A parser fix made in either repository 
 | `milestones.ts` | `src/views/TaskTreeDataProvider.ts` | `isMilestoneHeading` only, copied unchanged. |
 | `mutate.ts` | `src/services/SurgicalMutationService.ts` | Rewritten, not copied. Upstream applies a `vscode.WorkspaceEdit` to the open document; `replaceStateChar` works on the file's text and first checks that the bracket is still where it was parsed, because the mod reads and writes the file itself. |
 | `fixtures/obsidian.jsonc` | `resources/templates/obsidian.jsonc` | Copied unchanged, as a test fixture. |
-| `core.test.ts` | `test/unit/parser.test.ts`, `templates.test.ts`, `mutation.test.ts`, `tree.test.ts` | Cases ported to the functions above. The slug test is dropped with the slugs. Cases for the template parameter, `validateTemplate`, `parseJsonc` and `replaceStateChar` are new. |
+| `core.spec.ts` | `test/unit/parser.test.ts`, `templates.test.ts`, `mutation.test.ts`, `tree.test.ts` | Cases ported to the functions above. The slug test is dropped with the slugs. Cases for the template parameter, `validateTemplate`, `parseJsonc` and `replaceStateChar` are new. |
 
 ## Not copied
 
