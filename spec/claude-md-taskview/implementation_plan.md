@@ -34,9 +34,9 @@ None blocking. Decided on 2026-10-08:
 
 The spike (section 0) may add questions; record them here before starting section 1.
 
-Raised by the spike, awaiting the owner:
+Raised by the spike, decided on 2026-10-08:
 
-- **Minimum Claude Code version for task rows.** A `Button` holding `Text` children (the row design in section 3) is refused by 2.1.289 and accepted by 2.1.295. Either (a) keep a `try/catch` fallback to a string-label row, so builds from 2.1.287 still get a working pane without strikethrough on the label, or (b) state a higher minimum version in the README and drop the fallback. Recommendation: (a); it is about fifteen lines and the pane is otherwise unusable on a build one week old.
+- **Minimum Claude Code version for task rows: keep a fallback.** A `Button` holding `Text` children (the row design in section 3) is refused by 2.1.289 and accepted by 2.1.295. Rows are drawn that way inside a `try/catch`; when the engine throws, the row falls back to a `Text` glyph, a `Button` with a string label and a `Text` count, so builds from 2.1.287 still get a working pane. On those builds a done task's label is dimmed but not struck through, since a `Button` label takes `dimColor` only. The minimum version stays 2.1.287.
 
 ## Proposed Changes
 
@@ -117,7 +117,7 @@ The plugin sits at the repo root, so the repo itself is the installable mod.
 - [ ] Toolbar buttons: refresh (`r`), hide/show completed (`f`), expand all / collapse all (`e` / `c`).
 - [ ] Spec group row: name and `(done/total)`; pressing toggles collapse.
 - [ ] Heading row: indented by level; `⚑` for milestone headings (accent colour when all tasks done, outline otherwise), `▸`/`▾` for others; `(done/total)` or `(No tasks)`; pressing toggles collapse.
-- [ ] Task row: state glyph and colour from the active template (`○` todo, `◐` in progress, `●` done in green, `⊘` cancelled, `?`, `!`), label from `cleanText`; `strikethrough` + `dimColor` when the state says so and `strikeThroughCompleted` is on; sub-tasks indented beneath.
+- [ ] Task row: state glyph and colour from the active template (`○` todo, `◐` in progress, `●` done in green, `⊘` cancelled, `?`, `!`), label from `cleanText`; `strikethrough` + `dimColor` when the state says so and `strikeThroughCompleted` is on; sub-tasks indented beneath. Rows fall back to a string-label `Button` on builds that refuse `Text` children (see Open Questions).
 - [ ] Pressing a task: `$.fs.read`, `replaceStateChar` to `nextState`, `$.fs.write`, `refresh`. If `replaceStateChar` returns `null`, `refresh` and `$.ui.toast('Task moved on disk; list refreshed')` instead of writing.
 - [ ] Multi-state templates: a `Select` beside the focused task listing every state (replaces the right-click "Set Task State" menu). Hidden for the two-state Standard template.
 - [ ] Empty state: "No `spec/*/tasks.md` found in this folder." Error state: one dim line with `error`.
