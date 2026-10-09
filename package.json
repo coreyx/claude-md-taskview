@@ -1,0 +1,22 @@
+{
+  "name": "claude-md-taskview",
+  "version": "0.1.0",
+  "description": "Claude Code mod: a pane showing the milestone and task tree of spec/*/tasks.md files",
+  "private": true,
+  "author": "Corey Struzan",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/coreyx/claude-md-taskview.git"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc -p .",
+    "validate": "claude plugin validate .",
+    "test:mod": "claude plugin test ."
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3"
+  }
+}
