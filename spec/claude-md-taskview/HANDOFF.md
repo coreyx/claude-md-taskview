@@ -4,7 +4,7 @@
 Repo: `claude-md-taskview` (local git repo on `main`, not yet on GitHub). Spec: `spec/claude-md-taskview/` (light tier). Plan **`status: approved`** by the owner on 2026-10-08. Product context: the extension's [product.md](https://github.com/coreyx/vscode-md-taskview/blob/main/spec/vscode-md-taskview/product.md).
 
 ## Progress
-Every item in [implementation_plan.md](./implementation_plan.md) is checked off, sections 0 to 4, and [walkthrough.md](./walkthrough.md) is written. Both test suites, `claude plugin validate .` and the type-check pass. **The finished mod has not yet been seen in a live pane**: the walkthrough's ten manual steps are the remaining work, and they need the owner. The spike is still in `scratch/mod-spike/` (untracked, throwaway).
+Every item in [implementation_plan.md](./implementation_plan.md) is checked off, sections 0 to 4, and [walkthrough.md](./walkthrough.md) is written. Both test suites, `claude plugin validate .` and the type-check pass. The owner ran the walkthrough's manual steps in the Desktop Code tab on 2026-10-09 and reported that all passed; the terminal run is not yet reported. The spike is still in `scratch/mod-spike/` (untracked, throwaway).
 
 ## Key decisions & rationale
 - **Light tier, with a spike first.** One pane on an understood product; the risk was the week-old mods API, so unknowns were tested before any real code.
@@ -25,7 +25,7 @@ Every item in [implementation_plan.md](./implementation_plan.md) is checked off,
 - **`types/index.d.ts` must be self-contained:** no `import`, `export … from`, `require` or reference.
 - **A hook sees `$.fs` paths already resolved** to absolute paths with the platform's separators, whatever the mod passed. A test's `fs.*` stubs have to match on that.
 - **`claude plugin test .` runs every `*.test.ts` under the folder**, `scratch/` included, and such a file may import only its own files and `claude-code`. Anything for vitest must be named otherwise.
-- **Claude Code has a built-in `/tasks`.** Headless it reports "isn't available in this environment", and there the mod's own `/tasks` registered. Interactively the built-in should hold the name and the mod fall back to `/md-tasks`; not yet seen.
+- **Claude Code has a built-in `/tasks`, and registering the same name does not throw.** In the Desktop Code tab the mod's `/tasks` registered beside it: the list shows two `/tasks` entries and `/md-tasks` is never registered (owner's report, 2026-10-09). Headless, the built-in reports "isn't available in this environment" and the mod's own answers. So the `try/catch` fallback to `/md-tasks` has not been seen to fire on any build tried, despite the type definitions saying a built-in's name throws.
 - Check with `claude plugin validate .` and `claude plugin test .`; develop with `claude --plugin-dir .`. A Desktop Code tab session loads a folder named in `CLAUDE_CODE_PLUGIN_DIRS` (process environment or the `env` block of `~/.claude/settings.json`).
 
 ## Spike results (2026-10-08, Windows)
@@ -70,7 +70,7 @@ Every item in [implementation_plan.md](./implementation_plan.md) is checked off,
 None blocking; see the plan's Open Questions for the decisions made.
 
 ## Left in place outside the repo
-- `~/.claude/settings.json` had `env.CLAUDE_CODE_PLUGIN_DIRS` pointed at `scratch/mod-spike` for the Desktop check; removed on 2026-10-09 once the spike finished. Add it again, pointed at the repo root, to try the real mod in the Code tab.
+- `~/.claude/settings.json` has `env.CLAUDE_CODE_PLUGIN_DIRS` pointed at the repo root (set on 2026-10-09 for the manual checks). It loads the mod in every new session. It is a development switch, not the install: remove it once the mod is installed from a marketplace.
 
 ## Next steps
 1. The owner runs the manual verification in [walkthrough.md](./walkthrough.md), in the terminal and the Desktop Code tab, and reports what the pane shows and which command name registered.
