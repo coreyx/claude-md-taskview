@@ -79,7 +79,7 @@ The plugin sits at the repo root, so the repo itself is the installable mod.
 - [x] Add `parseJsonc(text)` (strip `//` and `/* */` comments and trailing commas, then `JSON.parse`) so no `jsonc-parser` dependency is needed.
 
 #### [NEW] `core/mutate.ts`
-- [ ] `replaceStateChar(content, bracketRange, expectedChar, nextChar)`: returns the new content, or `null` if the character at that position is no longer `expectedChar` between `[` and `]`. Preserves line endings and every other byte.
+- [x] `replaceStateChar(content, bracketRange, expectedChar, nextChar)`: returns the new content, or `null` if the character at that position is no longer `expectedChar` between `[` and `]`. Preserves line endings and every other byte.
 
 #### [NEW] `core/milestones.ts`
 - [ ] From `src/views/TaskTreeDataProvider.ts`: `isMilestoneHeading(label, keywords)`.
