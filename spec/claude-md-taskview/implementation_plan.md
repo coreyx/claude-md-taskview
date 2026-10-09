@@ -91,7 +91,7 @@ The plugin sits at the repo root, so the repo itself is the installable mod.
 - [x] `userConfig` fields mirroring the extension settings: `specPathPattern` (`spec/*`), `taskFileName` (`tasks.md`), `stateTemplate` (options: `Standard (GFM)`, `Obsidian Tasks`, `Custom`), `customTemplatePath`, `strikeThroughCompleted`, `showProgressCount`, `hideCompletedByDefault`, `useH1AsGroupName`, `milestoneKeywords` (comma-separated string).
 
 #### [NEW] `.claude-plugin/marketplace.json`
-- [ ] Marketplace entry for this repo so `/plugin install md-taskview --marketplace coreyx/claude-md-taskview` works.
+- [x] Marketplace entry for this repo so `/plugin install md-taskview --marketplace coreyx/claude-md-taskview` works.
 
 #### [NEW] `hooks/hooks.json`
 - [ ] `{ "modules": ["./register.tsx"] }` (or the bundle, per the spike).

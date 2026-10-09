@@ -1,0 +1,12 @@
+{
+  "name": "claude-md-taskview",
+  "description": "Markdown Tasks for Claude Code: the spec/*/tasks.md tree in a pane beside the transcript",
+  "owner": { "name": "Corey Struzan" },
+  "plugins": [
+    {
+      "name": "md-taskview",
+      "source": "./",
+      "description": "A pane showing the milestone and task tree of spec/*/tasks.md files; press a task to tick it"
+    }
+  ]
+}
