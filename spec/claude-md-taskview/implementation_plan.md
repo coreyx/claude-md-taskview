@@ -75,8 +75,8 @@ The plugin sits at the repo root, so the repo itself is the installable mod.
 - [ ] Drop heading slugs (`Slugifier`), which only served Markdown-preview navigation.
 
 #### [NEW] `core/templates.ts`
-- [ ] From `src/templates/StateTemplateEngine.ts`: `STANDARD_TEMPLATE`, `OBSIDIAN_TEMPLATE`, and pure `getState(template, char)` / `getNextState(template, char)` / `validateTemplate(obj)`.
-- [ ] Add `parseJsonc(text)` (strip `//` and `/* */` comments and trailing commas, then `JSON.parse`) so no `jsonc-parser` dependency is needed.
+- [x] From `src/templates/StateTemplateEngine.ts`: `STANDARD_TEMPLATE`, `OBSIDIAN_TEMPLATE`, and pure `getState(template, char)` / `getNextState(template, char)` / `validateTemplate(obj)`.
+- [x] Add `parseJsonc(text)` (strip `//` and `/* */` comments and trailing commas, then `JSON.parse`) so no `jsonc-parser` dependency is needed.
 
 #### [NEW] `core/mutate.ts`
 - [ ] `replaceStateChar(content, bracketRange, expectedChar, nextChar)`: returns the new content, or `null` if the character at that position is no longer `expectedChar` between `[` and `]`. Preserves line endings and every other byte.
