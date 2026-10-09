@@ -27,14 +27,17 @@ The Desktop Code tab takes no `--plugin-dir` flag. To try a clone there, name it
 
 ## Use
 
-Run `/tasks` in a folder that holds `spec/<name>/tasks.md` files. The pane opens beside the transcript; it never opens by itself. If a built-in command already holds the name `/tasks`, the mod registers `/md-tasks` instead.
+Run `/md-tasks` in a folder that holds `spec/<name>/tasks.md` files. The pane opens beside the transcript; it never opens by itself.
+
+The mod asks for the name `/tasks` first and takes `/md-tasks` when a built-in holds it. Claude Code has its own `/tasks` in interactive sessions, so `/md-tasks` is the name to expect there.
 
 - Each spec folder is a group, with its headings and tasks nested beneath it and a `(done/total)` count.
 - Press a group or a heading to collapse or expand it.
 - Press a task to move it to its next state. The file on disk changes by exactly one character.
+- Press the `↗` at the end of a heading or task row to open the file at that line in VS Code. This needs the `code` command on your `PATH`.
 - Headings that contain a milestone keyword show a flag, filled once every task beneath is done.
 - The toolbar refreshes (`r`), hides or shows completed tasks (`f`), and expands or collapses everything (`e` / `c`).
-- With a multi-state template, a picker beside the task sets any state directly.
+- With a multi-state template, a picker beneath the focused task sets any state directly.
 
 The pane re-reads a task file within about two seconds of it changing on disk, and at once after Claude edits one.
 
@@ -61,7 +64,8 @@ A custom template uses the same `*.jsonc` format as the extension; see [its READ
 - **Toggling writes straight to disk, with no undo.** There is no editor buffer or undo stack. A toggle re-reads the file, checks the bracket is still where it was parsed, and writes the file back. If something else edits the same file in the milliseconds between that read and write, one of the two edits is lost.
 - **Live sync is polling.** Mods have no file watcher, so the pane checks modification times about every 1.5 seconds.
 - **No right-click menus.** The state picker replaces "Set Task State"; the toolbar replaces the section menus.
-- **No Markdown-preview navigation modes and no "Create Sample Spec" command.**
+- **Jump-to-source opens VS Code only**, at the line, in its text editor. There are no Markdown-preview navigation modes and no "Create Sample Spec" command.
+- **Spec folders are found one level per `*`.** `spec/*` finds `spec/<name>/tasks.md`; it does not search deeper folders, and there are no separate include and exclude patterns.
 - **Strikethrough depends on the Claude Code build.** Older builds cannot strike through the label of a pressable row, so completed tasks are dimmed there instead.
 - The pane exists only in Claude Code surfaces (terminal, Desktop Code tab), not in regular Claude chat.
 
@@ -69,15 +73,19 @@ A custom template uses the same `*.jsonc` format as the extension; see [its READ
 
 ```bash
 npm install
-npm test            # parser, templates and mutation (vitest)
+npm test            # parser, templates and mutation (vitest, core/*.spec.ts)
 npm run validate    # claude plugin validate .
-npm run test:mod    # the pane, under claude plugin test .
+npm run test:mod    # the pane, under claude plugin test . (hooks/*.test.ts)
 npm run typecheck   # needs the types Claude Code lays on first load
 ```
 
-Claude Code writes its type definitions to `.claude-plugin/types/` the first time it loads the mod from this folder (`claude --plugin-dir .`), so run that once before `npm run typecheck`.
+Claude Code writes its type definitions to `.claude-plugin/types/` the first time it loads the mod from this folder in an interactive session (`claude --plugin-dir .`), so run that once before `npm run typecheck`.
+
+`claude plugin test .` runs every `*.test.ts` under the folder and cannot import vitest, which is why the vitest file is `core/core.spec.ts`.
 
 `core/` holds the parser copied from the extension; `core/UPSTREAM.md` records the source commit and what was changed, so fixes can be ported between the two repositories by hand.
+
+Two rules of the mods API shape `hooks/`: `$` may only be passed to functions declared at the top of `hooks/register.tsx`, never into another file, so `sync.ts` and `discover.ts` take closures; and `types/index.d.ts` must be self-contained, so it repeats the types in `core/types.ts`.
 
 ## License
 

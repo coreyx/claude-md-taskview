@@ -18,6 +18,11 @@ export const contractMatchesCore: Same<SpecGroup, ContractSpecGroup> = true;
 const PANE = 'md-tasks';
 const POLL_MS = 1500;
 const INDENT = '  ';
+const OPEN_TIMEOUT_MS = 15000;
+/** Columns the open control takes at the end of a row: a space and the arrow. */
+const OPEN_WIDTH = 2;
+// `cmd /c` re-reads its arguments as a command line, so a path holding one of these could run something else.
+const CMD_UNSAFE = /[&|<>^%!"]/;
 
 const groups = atom({ plugin: 'md-taskview', key: 'groups' } as const, []);
 const collapsed = atom({ plugin: 'md-taskview', key: 'collapsed' } as const, []);
@@ -191,6 +196,30 @@ async function registerCommand($: EngineInterface, mod: Mod): Promise<void> {
   }
 }
 
+/**
+ * Opens a task file at a line in VS Code, through its `code` command.
+ *
+ * `code` is tried by itself first. On Windows it is a script that some builds
+ * cannot start without a shell, so `cmd /c code` is the fallback, and only
+ * for a path `cmd` would not read as anything but a path.
+ *
+ * @param filePath The task file, relative to the session's working directory, which the command runs in.
+ * @param line Zero-indexed line, as the parser counts.
+ */
+async function openSource($: EngineInterface, filePath: string, line: number): Promise<void> {
+  const target = `${filePath}:${line + 1}`;
+  const opens = (argv: string[]): Promise<boolean> =>
+    $.process
+      .run(argv, { timeoutMs: OPEN_TIMEOUT_MS })
+      .then((ran) => ran.exitCode === 0)
+      .catch(() => false);
+
+  if (await opens(['code', '-g', target])) return;
+  if (!CMD_UNSAFE.test(target) && (await opens(['cmd', '/c', 'code', '-g', target]))) return;
+
+  $.ui.toast(`Markdown Tasks: could not open ${target} (is the VS Code "code" command on PATH?)`);
+}
+
 /** Answers the mod's command: opens the pane, and prints a line only when that failed. */
 async function openPane($: EngineInterface, mod: Mod): Promise<{ text?: string }> {
   try {
@@ -295,24 +324,38 @@ export const register: Register = (on, options) => {
       return label.length > room ? `${label.slice(0, room - 1)}…` : label;
     };
 
+    /** Adds the jump-to-source control after a row; pressing the row itself still toggles it. */
+    const withOpen = (rowElement: RenderElement, key: string, filePath: string, line: number): RenderElement => (
+      <Box>
+        {rowElement}
+        <Text> </Text>
+        <Button key={`o-${key}`} plain dimColor label="↗" onPress={() => void openSource($, filePath, line)} />
+      </Box>
+    );
+
     const drawRow = (row: Row): RenderElement | RenderElement[] => {
       const indent = INDENT.repeat(row.depth);
 
       if (row.kind === 'task') {
         const lead = `${indent}${row.glyph} `;
-        const rowElement = drawPressable(
-          el,
-          {
-            key: row.key,
-            before: [{ text: lead, ...(row.color === undefined ? {} : { color: row.color }) }],
-            label: {
-              text: fit(row.task.cleanText, lead.length),
-              ...(row.isStruck ? { strikethrough: true, dimColor: true } : {}),
+        const rowElement = withOpen(
+          drawPressable(
+            el,
+            {
+              key: row.key,
+              before: [{ text: lead, ...(row.color === undefined ? {} : { color: row.color }) }],
+              label: {
+                text: fit(row.task.cleanText, lead.length + OPEN_WIDTH),
+                ...(row.isStruck ? { strikethrough: true, dimColor: true } : {}),
+              },
+              after: [],
+              onPress: () => void setTaskState($, mod, row.task, getNextState(template, row.task.char).char),
             },
-            after: [],
-            onPress: () => void setTaskState($, mod, row.task, getNextState(template, row.task.char).char),
-          },
-          nesting,
+            nesting,
+          ),
+          row.key,
+          row.task.filePath,
+          row.task.line,
         );
         if (Select === undefined || template.states.length <= 2 || row.key !== focusedKey) return rowElement;
 
@@ -340,9 +383,9 @@ export const register: Register = (on, options) => {
       const chevron = row.isCollapsed ? '▸ ' : '▾ ';
       const flag = row.kind === 'heading' && row.isMilestone ? (row.isComplete ? '⚑ ' : '⚐ ') : '';
       const count = row.count === '' ? '' : ` ${row.count}`;
-      const used = indent.length + chevron.length + flag.length + count.length;
+      const used = indent.length + chevron.length + flag.length + count.length + OPEN_WIDTH;
 
-      return drawPressable(
+      const rowElement = drawPressable(
         el,
         {
           key: row.key,
@@ -352,10 +395,15 @@ export const register: Register = (on, options) => {
           ],
           label: { text: fit(row.kind === 'group' ? row.title : row.label, used), bold: row.kind === 'group' },
           after: [{ text: count, dimColor: true }],
-          onPress: () => void setCollapsed($, mod, (ids) => (ids.includes(row.id) ? ids.filter((id) => id !== row.id) : [...ids, row.id])),
+          onPress: () =>
+            void setCollapsed($, mod, (ids) =>
+              ids.includes(row.id) ? ids.filter((id) => id !== row.id) : [...ids, row.id],
+            ),
         },
         nesting,
       );
+
+      return row.kind === 'heading' ? withOpen(rowElement, row.key, row.filePath, row.line) : rowElement;
     };
 
     return (

@@ -295,6 +295,66 @@ test("Claude's own edit to a task file shows without waiting for a poll", async 
   await ui.unmount();
 });
 
+for (const surface of SURFACES) {
+  test(`${surface}: the open control runs "code -g" at the row's line and leaves the task alone`, async ($, on) => {
+    const disk = world(on, { [AUTH_PATH]: AUTH });
+    const ran: string[][] = [];
+    on('process.run', (_$, e) => {
+      ran.push([...e.argv]);
+      return { value: { exitCode: 0, stdout: '', stderr: '', isStdoutTruncated: false, isStderrTruncated: false } };
+    });
+    await $.session.start({ cwd: CWD, surface, isInteractive: true });
+    const ui = await $.ui.mount({ plugin: 'md-taskview', surface, component: 'Pane', requestId: 'md-tasks', props: PANE });
+
+    await ui.press({ key: 'o-t-0-2' });
+    await ui.press({ key: 'o-h-0-3' });
+
+    // Lines are one-based for the editor; the parser counts from zero.
+    expect(ran).toEqual([
+      ['code', '-g', `${AUTH_PATH}:3`],
+      ['code', '-g', `${AUTH_PATH}:4`],
+    ]);
+    expect(disk.writes).toEqual([]);
+    expect(await ui.find({ key: 'o-g-0' })).toBeUndefined();
+    await ui.unmount();
+  });
+}
+
+test('opening falls back to "cmd /c code", but never for a path cmd could misread', async ($, on) => {
+  const risky = 'spec/a&b/tasks.md';
+  const disk = world(on, { [AUTH_PATH]: AUTH, [risky]: BILLING });
+  const ran: string[][] = [];
+  on('process.run', (_$, e) => {
+    ran.push([...e.argv]);
+    // As a build that cannot start the `code` script without a shell.
+    if (e.argv[0] === 'code') return { deny: 'spawn code ENOENT' };
+    return { value: { exitCode: 0, stdout: '', stderr: '', isStdoutTruncated: false, isStderrTruncated: false } };
+  });
+  await $.session.start({ cwd: CWD, surface: 'terminal', isInteractive: true });
+  const ui = await $.ui.mount({
+    plugin: 'md-taskview',
+    surface: 'terminal',
+    component: 'Pane',
+    requestId: 'md-tasks',
+    props: PANE,
+  });
+
+  // Groups sort by name: "a&b" is g-0, "auth" is g-1.
+  await ui.press({ key: 'o-t-1-2' });
+  expect(ran).toEqual([
+    ['code', '-g', `${AUTH_PATH}:3`],
+    ['cmd', '/c', 'code', '-g', `${AUTH_PATH}:3`],
+  ]);
+  expect(disk.toasts).toEqual([]);
+
+  ran.length = 0;
+  await ui.press({ key: 'o-t-0-0' });
+  expect(ran).toEqual([['code', '-g', `${risky}:1`]]);
+  expect(disk.toasts.length).toBe(1);
+  expect(disk.toasts[0]).toContain(`could not open ${risky}:1`);
+  await ui.unmount();
+});
+
 test('falls back to /md-tasks and leaves a built-in /tasks alone', async ($, on) => {
   const disk = world(on, { [AUTH_PATH]: AUTH }, ['tasks']);
   await $.session.start({ cwd: CWD, surface: 'terminal', isInteractive: true });

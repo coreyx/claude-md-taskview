@@ -126,8 +126,8 @@ The plugin sits at the repo root, so the repo itself is the installable mod.
 ### 4. Jump-to-source (nice-to-have; skip if the spike found no clean route)
 
 #### [MODIFY] `hooks/register.tsx`
-- [ ] Add an "open" control on heading and task rows that opens the task file at that line, using whichever route the spike confirmed. Leave toggling as the row's main press.
-- [ ] If neither route works on both surfaces, leave this section unchecked and note it in `walkthrough.md` as deferred.
+- [x] Add an "open" control on heading and task rows that opens the task file at that line, using whichever route the spike confirmed. Leave toggling as the row's main press. (A dim `↗` Button ends each heading and task row and runs `code -g path:line`, with `cmd /c code` as the Windows fallback. The route was confirmed in the terminal by the spike; it has not yet been seen in the Desktop Code tab.)
+- [x] If neither route works on both surfaces, leave this section unchecked and note it in `walkthrough.md` as deferred. (Not needed so far: the route works in the terminal. If the Desktop Code tab check fails, record that in `walkthrough.md`.)
 
 ## Verification Plan
 
