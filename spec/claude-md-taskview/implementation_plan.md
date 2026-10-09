@@ -104,10 +104,10 @@ The plugin sits at the repo root, so the repo itself is the installable mod.
 - [x] Skip `node_modules`, `dist`, `.git`.
 
 #### [NEW] `hooks/sync.ts`
-- [ ] `refresh($)`: discover, `$.fs.read` each task file, `parseTasks`, write the `groups` atom. On a read or parse error set `error` and keep the previous groups.
-- [ ] `poll($)`: `$.fs.stat` each known task file; call `refresh` only when an `mtimeMs` changed. Re-run discovery every 10th poll to pick up new spec folders.
-- [ ] Started from `session.start` with `$.clock.every(1500, ...)`.
-- [ ] `on('tool.call', ...)` for `Edit`, `Write`, `MultiEdit`: `await next(e)`, then `refresh` if the target path ends in `taskFileName`.
+- [x] `refresh($)`: discover, `$.fs.read` each task file, `parseTasks`, write the `groups` atom. On a read or parse error set `error` and keep the previous groups. (It takes a `Host` of closures for the same reason; the atoms are declared in `hooks/register.tsx`.)
+- [x] `poll($)`: `$.fs.stat` each known task file; call `refresh` only when an `mtimeMs` changed. Re-run discovery every 10th poll to pick up new spec folders.
+- [x] Started from `session.start` with `$.clock.every(1500, ...)`.
+- [x] `on('tool.call', ...)` for `Edit`, `Write`, `MultiEdit`: `await next(e)`, then `refresh` if the target path ends in `taskFileName`. (Registered in `hooks/register.tsx` and matched on `Edit` and `Write`; this build has no `MultiEdit` tool.)
 
 #### [NEW] `hooks/register.tsx`
 - [ ] `session.start`: load the template, restore `collapsed` and `hideCompleted` from `$.store` (keyed by working directory), first `refresh`, register `/tasks` last inside `try/catch` with `immediate: true`; on a name clash register `/md-tasks`.
