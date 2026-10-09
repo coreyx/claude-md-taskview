@@ -4,7 +4,7 @@
 Repo: `claude-md-taskview` (local git repo on `main`, not yet on GitHub). Spec: `spec/claude-md-taskview/` (light tier). Plan **`status: approved`** by the owner on 2026-10-08. Product context: the extension's [product.md](https://github.com/coreyx/vscode-md-taskview/blob/main/spec/vscode-md-taskview/product.md).
 
 ## Progress
-Section 0 (platform spike) of [implementation_plan.md](./implementation_plan.md) is complete and passed its gate: imports need no bundling, and the pane is usable in the Desktop Code tab. Next is section 1 (repo scaffold). The spike is in `scratch/mod-spike/` (untracked, throwaway).
+Every item in [implementation_plan.md](./implementation_plan.md) is checked off, sections 0 to 4, and [walkthrough.md](./walkthrough.md) is written. Both test suites, `claude plugin validate .` and the type-check pass. **The finished mod has not yet been seen in a live pane**: the walkthrough's ten manual steps are the remaining work, and they need the owner. The spike is still in `scratch/mod-spike/` (untracked, throwaway).
 
 ## Key decisions & rationale
 - **Light tier, with a spike first.** One pane on an understood product; the risk was the week-old mods API, so unknowns were tested before any real code.
@@ -21,6 +21,11 @@ Section 0 (platform spike) of [implementation_plan.md](./implementation_plan.md)
 - `$.state` values must be declared in `types/index.d.ts`; `/clear`, `/resume`, `/branch` reset them and fire `classic.SessionStart`, not `session.start`. A render hook may not write `$.state`.
 - `$.command.register` throws on a name a built-in holds; register last, inside `try/catch`.
 - `userConfig` in `plugin.json` supplies settings; a string field with `options` becomes a picker.
+- **`$` is only followed inside the hooks module's own file.** `claude plugin validate` refuses a mod that passes `$` to an imported function, or to a function not declared at the top of that file (a closure inside `register` counts as not declared there). Hand other files closures over `$` instead. `update($, atom, fn)` and `read($, atom)` from `claude-code` are fine.
+- **`types/index.d.ts` must be self-contained:** no `import`, `export … from`, `require` or reference.
+- **A hook sees `$.fs` paths already resolved** to absolute paths with the platform's separators, whatever the mod passed. A test's `fs.*` stubs have to match on that.
+- **`claude plugin test .` runs every `*.test.ts` under the folder**, `scratch/` included, and such a file may import only its own files and `claude-code`. Anything for vitest must be named otherwise.
+- **Claude Code has a built-in `/tasks`.** Headless it reports "isn't available in this environment", and there the mod's own `/tasks` registered. Interactively the built-in should hold the name and the mod fall back to `/md-tasks`; not yet seen.
 - Check with `claude plugin validate .` and `claude plugin test .`; develop with `claude --plugin-dir .`. A Desktop Code tab session loads a folder named in `CLAUDE_CODE_PLUGIN_DIRS` (process environment or the `env` block of `~/.claude/settings.json`).
 
 ## Spike results (2026-10-08, Windows)
@@ -68,6 +73,6 @@ None blocking; see the plan's Open Questions for the decisions made.
 - `~/.claude/settings.json` had `env.CLAUDE_CODE_PLUGIN_DIRS` pointed at `scratch/mod-spike` for the Desktop check; removed on 2026-10-09 once the spike finished. Add it again, pointed at the repo root, to try the real mod in the Code tab.
 
 ## Next steps
-1. Section 1: repo scaffold. `.gitignore` covers `scratch/`, so the spike stays untracked.
-2. Sections 2 and 3: `core/` copied from `../vscode-md-taskview` at `b591e0f`, then the mod. Rows use the `try/catch` fallback, with a test that forces it.
-3. Section 4: jump-to-source, checked in the Desktop Code tab as well as the terminal.
+1. The owner runs the manual verification in [walkthrough.md](./walkthrough.md), in the terminal and the Desktop Code tab, and reports what the pane shows and which command name registered.
+2. Fix what that turns up. The likeliest decisions are in the walkthrough's Follow-ups: the command name, and whether one `↗` per row is tolerable from the keyboard.
+3. Push to `coreyx/claude-md-taskview` so the marketplace install line works, then `prepare-release` when asked.
