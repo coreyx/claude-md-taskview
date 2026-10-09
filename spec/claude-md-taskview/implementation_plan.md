@@ -55,7 +55,7 @@ The plugin sits at the repo root, so the repo itself is the installable mod.
 ### 1. Repo scaffold
 
 #### [NEW] `README.md`, `LICENSE`, `.gitignore`, `CHANGELOG.md`
-- [ ] README: what it is, install (`claude --plugin-dir .`, then marketplace install), the `/tasks` command, settings, and the differences from the extension listed in User Review Required. Link the extension repo.
+- [x] README: what it is, install (`claude --plugin-dir .`, then marketplace install), the `/tasks` command, settings, and the differences from the extension listed in User Review Required. Link the extension repo.
 - [ ] MIT licence, same holder as the extension.
 - [ ] `.gitignore`: `node_modules/`, `dist/`, `scratch/`, `.claude-plugin/types/`.
 
