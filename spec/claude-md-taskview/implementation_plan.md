@@ -82,7 +82,7 @@ The plugin sits at the repo root, so the repo itself is the installable mod.
 - [x] `replaceStateChar(content, bracketRange, expectedChar, nextChar)`: returns the new content, or `null` if the character at that position is no longer `expectedChar` between `[` and `]`. Preserves line endings and every other byte.
 
 #### [NEW] `core/milestones.ts`
-- [ ] From `src/views/TaskTreeDataProvider.ts`: `isMilestoneHeading(label, keywords)`.
+- [x] From `src/views/TaskTreeDataProvider.ts`: `isMilestoneHeading(label, keywords)`.
 
 ### 3. The mod
 
