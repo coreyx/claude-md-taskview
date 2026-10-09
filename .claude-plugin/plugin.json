@@ -1,0 +1,69 @@
+{
+  "name": "md-taskview",
+  "version": "0.1.0",
+  "description": "A pane showing the milestone and task tree of spec/*/tasks.md files; press a task to tick it",
+  "author": {
+    "name": "Corey Struzan"
+  },
+  "homepage": "https://github.com/coreyx/claude-md-taskview",
+  "repository": "https://github.com/coreyx/claude-md-taskview",
+  "license": "MIT",
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "specPathPattern": {
+      "type": "string",
+      "title": "Spec path pattern",
+      "description": "Where spec folders are, relative to the working directory. * matches one folder level.",
+      "default": "spec/*"
+    },
+    "taskFileName": {
+      "type": "string",
+      "title": "Task file name",
+      "description": "File name containing task definitions inside each spec folder.",
+      "default": "tasks.md"
+    },
+    "stateTemplate": {
+      "type": "string",
+      "title": "State template",
+      "description": "Active task state template for parsing and cycling task states.",
+      "options": ["Standard (GFM)", "Obsidian Tasks", "Custom"],
+      "default": "Standard (GFM)"
+    },
+    "customTemplatePath": {
+      "type": "string",
+      "title": "Custom template path",
+      "description": "Path to a custom *.jsonc state template file (used when the state template is Custom).",
+      "default": ""
+    },
+    "strikeThroughCompleted": {
+      "type": "boolean",
+      "title": "Strike through completed",
+      "description": "Render completed and cancelled task labels with strikethrough styling.",
+      "default": true
+    },
+    "showProgressCount": {
+      "type": "boolean",
+      "title": "Show progress count",
+      "description": "Display completion statistics (completed/total) on headings and spec groups.",
+      "default": true
+    },
+    "hideCompletedByDefault": {
+      "type": "boolean",
+      "title": "Hide completed by default",
+      "description": "Hide completed tasks when the pane first opens in a folder.",
+      "default": false
+    },
+    "useH1AsGroupName": {
+      "type": "boolean",
+      "title": "Use H1 as group name",
+      "description": "Use the first level-1 heading in the task file as the group title instead of the folder name.",
+      "default": false
+    },
+    "milestoneKeywords": {
+      "type": "string",
+      "title": "Milestone keywords",
+      "description": "Comma-separated keywords that mark a heading as a milestone.",
+      "default": "Milestone, Release, Alpha, Beta"
+    }
+  }
+}

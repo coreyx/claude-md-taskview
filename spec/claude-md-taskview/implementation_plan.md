@@ -87,8 +87,8 @@ The plugin sits at the repo root, so the repo itself is the installable mod.
 ### 3. The mod
 
 #### [NEW] `.claude-plugin/plugin.json`
-- [ ] Name `md-taskview`, version `0.1.0`, `"types": "./types/index.d.ts"`.
-- [ ] `userConfig` fields mirroring the extension settings: `specPathPattern` (`spec/*`), `taskFileName` (`tasks.md`), `stateTemplate` (options: `Standard (GFM)`, `Obsidian Tasks`, `Custom`), `customTemplatePath`, `strikeThroughCompleted`, `showProgressCount`, `hideCompletedByDefault`, `useH1AsGroupName`, `milestoneKeywords` (comma-separated string).
+- [x] Name `md-taskview`, version `0.1.0`, `"types": "./types/index.d.ts"`.
+- [x] `userConfig` fields mirroring the extension settings: `specPathPattern` (`spec/*`), `taskFileName` (`tasks.md`), `stateTemplate` (options: `Standard (GFM)`, `Obsidian Tasks`, `Custom`), `customTemplatePath`, `strikeThroughCompleted`, `showProgressCount`, `hideCompletedByDefault`, `useH1AsGroupName`, `milestoneKeywords` (comma-separated string).
 
 #### [NEW] `.claude-plugin/marketplace.json`
 - [ ] Marketplace entry for this repo so `/plugin install md-taskview --marketplace coreyx/claude-md-taskview` works.
@@ -133,7 +133,7 @@ The plugin sits at the repo root, so the repo itself is the installable mod.
 
 ### Automated Tests
 
-`core/core.test.ts` (vitest; fixtures ported from the extension's `test/unit/parser.test.ts`, `templates.test.ts` and `mutation.test.ts`):
+`core/core.spec.ts` (named `.spec.ts` because `claude plugin test .` runs every `*.test.ts` in the repo and cannot import vitest; vitest; fixtures ported from the extension's `test/unit/parser.test.ts`, `templates.test.ts` and `mutation.test.ts`):
 1. `parseTasks` yields the same headings, tasks, nesting and stats the extension's parser tests expect, including checklist items written as headings.
 2. `replaceStateChar` changes exactly one character, preserves CRLF, and returns `null` when the bracket has moved or the character differs.
 3. `parseJsonc` reads the extension's `obsidian.jsonc` template (copied as a fixture) to an object equal to `OBSIDIAN_TEMPLATE`.
