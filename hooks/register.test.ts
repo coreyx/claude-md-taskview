@@ -138,11 +138,11 @@ for (const surface of SURFACES) {
     const disk = world(on, { [AUTH_PATH]: AUTH, 'spec/billing/tasks.md': BILLING, 'spec/notes.md': 'not a spec' });
     const ui = await start($);
 
-    expect((await ui.find({ key: 'g-0' }))?.text).toContain('auth (2/3)');
-    expect((await ui.find({ key: 'g-1' }))?.text).toContain('billing (0/2)');
-    expect((await ui.find({ key: 'h-0-0' }))?.text).toContain('Milestone 1: Setup (2/3)');
+    expect((await ui.find({ key: 'r-g-0' }))?.text).toContain('auth (2/3)');
+    expect((await ui.find({ key: 'r-g-1' }))?.text).toContain('billing (0/2)');
+    expect((await ui.find({ key: 'r-h-0-0' }))?.text).toContain('Milestone 1: Setup (2/3)');
     // Bold markers are stripped by the copied parser, whose lookbehind patterns must run in this engine.
-    expect((await ui.find({ key: 't-0-1' }))?.text).toContain(done('Scaffold the project'));
+    expect((await ui.find({ key: 'r-t-0-1' }))?.text).toContain(done('Scaffold the project'));
     expect(disk.commands).toEqual(['md-tasks']);
     await ui.unmount();
   });
@@ -172,6 +172,24 @@ for (const surface of SURFACES) {
     await ui.unmount();
   });
 
+  test(`${surface}: glyph colours sit where the surface draws them`, async ($, on) => {
+    world(on, { [AUTH_PATH]: AUTH });
+    const ui = await start($);
+
+    const button = await ui.find({ type: 'Button', key: 't-0-1' });
+    const glyph = await ui.find({ type: 'Text', text: '●' });
+    expect(glyph?.props).toMatchObject({ color: 'success' });
+    if (surface === 'terminal') {
+      // One Button holding the styled Text: the terminal draws its colours.
+      expect(button?.text).toContain('●');
+    } else {
+      // The Desktop Code tab ignores colour inside a Button, so the glyph is drawn beside it.
+      expect(button?.props.label).toBe(done('Scaffold the project'));
+      expect(button?.text).not.toContain('●');
+    }
+    await ui.unmount();
+  });
+
   test(`${surface}: pressing a task changes one character on disk and redraws it done`, async ($, on) => {
     const disk = world(on, { [AUTH_PATH]: AUTH });
     const ui = await start($);
@@ -179,10 +197,14 @@ for (const surface of SURFACES) {
     await ui.press({ key: 't-0-2' });
 
     expect(disk.writes).toEqual([{ path: AUTH_PATH, text: AUTH.replace('- [ ] Write tests', '- [x] Write tests') }]);
-    expect((await ui.find({ key: 'g-0' }))?.text).toContain('auth (3/3)');
-    expect((await ui.find({ type: 'Text', text: done('Write tests') }))?.props).toMatchObject({ strikethrough: true });
-    // Outside the terminal the Button is dimmed too, since the dimming on its Text is not drawn there.
-    expect((await ui.find({ type: 'Button', key: 't-0-2' }))?.props.dimColor).toBe(surface === 'terminal' ? undefined : true);
+    expect((await ui.find({ key: 'r-g-0' }))?.text).toContain('auth (3/3)');
+    if (surface === 'terminal') {
+      expect((await ui.find({ type: 'Text', text: 'Write tests' }))?.props).toMatchObject({ strikethrough: true, dimColor: true });
+    } else {
+      // The Desktop Code tab draws a Button's content as plain text, so the label is the Button's own,
+      // struck in its characters and dimmed on the Button.
+      expect((await ui.find({ type: 'Button', key: 't-0-2' }))?.props).toMatchObject({ label: done('Write tests'), dimColor: true });
+    }
     // The milestone's flag fills once every task beneath it is done.
     expect((await ui.find({ type: 'Text', text: '⚑' }))?.props).toMatchObject({ color: 'success' });
     await ui.unmount();
@@ -196,7 +218,7 @@ for (const surface of SURFACES) {
 
     expect(await ui.find({ key: 't-0-1' })).toBeUndefined();
     expect(await ui.find({ key: 'h-0-3' })).toBeUndefined();
-    expect((await ui.find({ key: 'h-0-0' }))?.text).toContain('▸');
+    expect((await ui.find({ key: 'r-h-0-0' }))?.text).toContain('▸');
     expect(disk.store[`view:${CWD}`]).toEqual({ collapsed: [`${AUTH_PATH}#H0_L1`], hideCompleted: false });
 
     await ui.press({ key: 'h-0-0' });
@@ -214,7 +236,7 @@ for (const surface of SURFACES) {
     expect(await ui.find({ key: 't-0-2' })).toBeDefined();
     // A nested heading whose tasks are all done goes too.
     expect(await ui.find({ key: 'h-0-3' })).toBeUndefined();
-    expect((await ui.find({ key: 'g-0' }))?.text).toContain('auth (2/3)');
+    expect((await ui.find({ key: 'r-g-0' }))?.text).toContain('auth (2/3)');
     expect((await ui.find({ key: 'filter' }))?.props).toMatchObject({ label: 'Show completed' });
     expect(disk.store[`view:${CWD}`]).toEqual({ collapsed: [], hideCompleted: true });
     await ui.unmount();
@@ -232,7 +254,7 @@ for (const surface of SURFACES) {
     await disk.clock.advance(1500);
 
     expect(disk.reads.length).toBe(readsAtStart + 1);
-    expect((await ui.find({ key: 'g-0' }))?.text).toContain('auth (3/3)');
+    expect((await ui.find({ key: 'r-g-0' }))?.text).toContain('auth (3/3)');
     await ui.unmount();
   });
 
@@ -246,7 +268,7 @@ for (const surface of SURFACES) {
 
     expect(disk.writes).toEqual([]);
     expect(disk.toasts).toEqual(['Task moved on disk; list refreshed']);
-    expect((await ui.find({ key: 't-0-3' }))?.text).toContain('Write tests');
+    expect((await ui.find({ key: 'r-t-0-3' }))?.text).toContain('Write tests');
     await ui.unmount();
   });
 
@@ -262,7 +284,7 @@ for (const surface of SURFACES) {
     disk.store[`view:${CWD}`] = { collapsed: [AUTH_PATH], hideCompleted: false };
     await $.classic.SessionStart({ source: 'clear', cwd: CWD });
     expect(await ui.find({ key: 'h-0-0' })).toBeUndefined();
-    expect((await ui.find({ key: 'g-0' }))?.text).toContain('▸');
+    expect((await ui.find({ key: 'r-g-0' }))?.text).toContain('▸');
     await ui.unmount();
   });
 
@@ -347,7 +369,7 @@ test("Claude's own edit to a task file shows without waiting for a poll", async 
     new_string: '- [x] Write tests',
   });
 
-  expect((await ui.find({ key: 'g-0' }))?.text).toContain('auth (3/3)');
+  expect((await ui.find({ key: 'r-g-0' }))?.text).toContain('auth (3/3)');
   await ui.unmount();
 });
 
@@ -447,8 +469,8 @@ for (const surface of SURFACES) {
     expect(spinners).toHaveLength(12);
     expect(spinners.at(-1)?.key).toBe('a-t-0-11');
     // The thirteenth is still an in-progress task, and still pressable.
-    expect((await ui.find({ key: 't-0-12' }))?.text).toContain('◐');
-    expect((await ui.find({ key: 't-0-12' }))?.text).toContain('Task 13');
+    expect((await ui.find({ key: 'r-t-0-12' }))?.text).toContain('◐');
+    expect((await ui.find({ key: 'r-t-0-12' }))?.text).toContain('Task 13');
     await ui.unmount();
   });
 
@@ -469,7 +491,7 @@ for (const surface of SURFACES) {
       const ui = await open($);
 
       expect(await ui.findAll({ type: 'Client' })).toEqual([]);
-      expect((await ui.find({ key: 't-0-1' }))?.text).toContain('◐');
+      expect((await ui.find({ key: 'r-t-0-1' }))?.text).toContain('◐');
       await ui.unmount();
     },
   );
@@ -480,7 +502,7 @@ for (const surface of SURFACES) {
     const ui = await open($);
 
     expect(await ui.findAll({ type: 'Client' })).toEqual([]);
-    expect((await ui.find({ key: 't-0-1' }))?.text).toContain('◐');
+    expect((await ui.find({ key: 'r-t-0-1' }))?.text).toContain('◐');
     await ui.unmount();
   });
 
@@ -540,7 +562,7 @@ test('a surface with no Client element draws the static in-progress glyph', OBSI
   });
 
   expect(await ui.findAll({ type: 'Client' })).toEqual([]);
-  expect((await ui.find({ key: 't-0-1' }))?.text).toContain('◐');
+  expect((await ui.find({ key: 'r-t-0-1' }))?.text).toContain('◐');
   await ui.unmount();
 });
 
@@ -559,8 +581,8 @@ test(
     });
 
     // A leading slash is not an absolute path here: the pattern is always relative to the working directory.
-    expect((await ui.find({ key: 'g-0' }))?.text).toContain('auth (2/3)');
-    expect((await ui.find({ key: 'h-0-0' }))?.text).toContain('⚐');
+    expect((await ui.find({ key: 'r-g-0' }))?.text).toContain('auth (2/3)');
+    expect((await ui.find({ key: 'r-h-0-0' }))?.text).toContain('⚐');
     await ui.unmount();
   },
 );

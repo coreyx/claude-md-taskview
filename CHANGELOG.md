@@ -12,7 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **Flattened tree in the Desktop Code tab:** headings and tasks drew at one level there instead of indented under their parents. The indent was spaces at the start of each row's Button, which the Desktop Code tab drops. Rows are now indented by padding.
-- **Completed tasks in the Desktop Code tab:** they drew like any other task there, neither struck through nor dimmed, because the Desktop Code tab ignores the styles of text inside a row's Button. Outside the terminal a completed task's label is now struck through in its characters, as the VS Code extension does, and the Button itself is dimmed.
+- **Completed tasks in the Desktop Code tab:** they drew like any other task there, neither struck through nor dimmed, because the Desktop Code tab ignores the styles of text inside a row's Button. Outside the terminal a completed task's label is now struck through in its characters, as the VS Code extension does, and dimmed.
+- **Colours in the Desktop Code tab:** the green done glyph, the filled milestone flag and the other state colours drew in the plain text colour there, for the same reason. Outside the terminal each row is now drawn as its glyph and count beside a Button holding the label, so the colours show.
 
 ## [0.2.0] - 2026-10-13
 

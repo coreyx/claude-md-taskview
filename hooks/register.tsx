@@ -58,28 +58,25 @@ export interface Pressable {
   label: Part;
   after: Part[];
   onPress: () => void;
-  /**
-   * Dim the Button itself, not only its label's Text. Set outside the
-   * terminal, where a Button ignores the styles of the Text inside it.
-   */
-  isButtonDim?: boolean;
 }
 
 /** The slice of a surface's element table the rows are built from. */
 export type RowElements = Pick<Elements[RenderSurface], 'Box' | 'Button' | 'Text'>;
 
 /**
- * Draws a pressable row, as one plain Button holding styled Text where the
- * build allows it.
+ * Draws a pressable row, as one plain Button holding styled Text where that
+ * is drawn as written, else as Text, a string-label Button and Text side by side.
  *
  * Builds before 2.1.294 refuse Text inside a Button, throwing as the element
- * is made; the row then falls back to Text, a string-label Button and Text
- * side by side. A Button's own label cannot be struck through, so there a
- * struck label is only dimmed.
+ * is made, and the row falls back. The Desktop Code tab accepts it but draws a
+ * Button's content as plain text, colour and all, so the pane asks for the
+ * side-by-side form there from the start. A Button's own label cannot be
+ * struck through, so in that form a struck label is only dimmed, unless its
+ * text carries the stroke (see strikeThrough).
  *
  * @param el The surface's Box, Button and Text.
  * @param row What to draw.
- * @param nesting Remembers whether the rich form was refused, so a long list tries it once.
+ * @param nesting Whether to draw the side-by-side form: set up front where the rich form draws wrongly, and remembered once a build refuses it, so a long list tries it once.
  */
 export function drawPressable(el: RowElements, row: Pressable, nesting: { isRefused: boolean }): RenderElement {
   const { Box, Button, Text } = el;
@@ -94,7 +91,7 @@ export function drawPressable(el: RowElements, row: Pressable, nesting: { isRefu
   if (!nesting.isRefused) {
     try {
       return (
-        <Button key={row.key} plain {...(row.isButtonDim ? { dimColor: true } : {})} onPress={row.onPress}>
+        <Button key={row.key} plain onPress={row.onPress}>
           {before}
           {text(row.label)}
           {after}
@@ -363,12 +360,14 @@ export const register: Register = (on, options) => {
     const pickerKey = await read($, picker);
 
     const { settings, template } = session;
-    // The terminal styles the Text inside a Button. The Desktop Code tab draws the Button's content
-    // as plain text, so there a completed task is struck through in its characters and dimmed on the Button.
+    // The terminal styles the Text inside a Button. The Desktop Code tab draws a Button's content as
+    // plain text, ignoring colour, dimming and strikethrough, so there rows are drawn side by side:
+    // the glyph and count as Text beside a Button holding the label, a struck label carrying the stroke
+    // in its characters.
     const stylesButtonText = e.surface === 'terminal';
     const rows = buildRows(list, { collapsed: new Set(collapsedIds), hideCompleted: isHiding, template, settings });
     const columns = Math.max(20, e.props.bodyColumns);
-    const nesting = mod.nestingBySurface.get(e.surface) ?? { isRefused: false };
+    const nesting = mod.nestingBySurface.get(e.surface) ?? { isRefused: !stylesButtonText };
     mod.nestingBySurface.set(e.surface, nesting);
 
     /** Shortens a label so its row stays on one line of the pane. */
@@ -394,7 +393,7 @@ export const register: Register = (on, options) => {
       indent: number,
       isTask: boolean,
     ): RenderElement => (
-      <Box paddingLeft={indent}>
+      <Box key={`r-${key}`} paddingLeft={indent}>
         {rowElement}
         {isTask && hasPicker && <Text> </Text>}
         {isTask && hasPicker && (
@@ -471,7 +470,6 @@ export const register: Register = (on, options) => {
               },
               after: [],
               onPress: press,
-              isButtonDim: row.isStruck && !stylesButtonText,
             },
             nesting,
           ),
@@ -529,7 +527,9 @@ export const register: Register = (on, options) => {
       );
 
       // A group is the outermost level, so it has no indent to carry.
-      return row.kind === 'heading' ? withControls(rowElement, row.key, row.filePath, row.line, indent, false) : rowElement;
+      if (row.kind === 'heading') return withControls(rowElement, row.key, row.filePath, row.line, indent, false);
+      // Every row sits in a Box keyed after it, so the whole row can be found as one, whichever form it took.
+      return <Box key={`r-${row.key}`}>{rowElement}</Box>;
     };
 
     return (
