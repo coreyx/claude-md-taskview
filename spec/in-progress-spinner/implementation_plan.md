@@ -81,9 +81,9 @@ None blocking. The spike (section 0) decides one thing: whether the spinner is a
 ### 3. Documentation
 
 #### [MODIFY] `README.md`
-- [ ] Add the spinner to "Use", `animateTaskIcons` to the settings table, and a line under the differences from the extension: reduced motion follows Claude Code's `prefersReducedMotion`, and the editor task actions are not part of the mod.
-- [ ] State plainly in "Use" which template gives which press behaviour: Standard toggles done and not done; Obsidian Tasks cycles through in progress.
-- [ ] In "Settings", spell out how to change a setting: the `/config` row, and the `pluginConfigs` entry in `~/.claude/settings.json` with a worked example that sets `stateTemplate` to `Obsidian Tasks`, and say when each takes effect.
+- [x] Add the spinner to "Use", `animateTaskIcons` to the settings table, and a line under the differences from the extension: reduced motion follows Claude Code's `prefersReducedMotion`, and the editor task actions are not part of the mod.
+- [x] State plainly in "Use" which template gives which press behaviour: Standard toggles done and not done; Obsidian Tasks cycles through in progress.
+- [x] In "Settings", spell out how to change a setting: the `/config` row, and the `pluginConfigs` entry in `~/.claude/settings.json` with a worked example that sets `stateTemplate` to `Obsidian Tasks`, and say when each takes effect.
 
 #### [MODIFY] `CHANGELOG.md`
 - [ ] Under `[Unreleased]`, `Added`: the spinner, the `animateTaskIcons` setting, and the `animatedIcon` field for custom templates.

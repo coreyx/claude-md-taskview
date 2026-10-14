@@ -32,6 +32,9 @@ Run `/md-tasks` in a folder that holds `spec/<name>/tasks.md` files. The pane op
 - Each spec folder is a group, with its headings and tasks nested beneath it and a `(done/total)` count.
 - Press a group or a heading to collapse or expand it.
 - Press a task to move it to its next state. The file on disk changes by exactly one character.
+  - With the **Standard (GFM)** template a press toggles not done `[ ]` and done `[x]`, and nothing else is ever written.
+  - With the **Obsidian Tasks** template a press goes not started `[ ]`, in progress `[/]`, done `[x]`, then back to not started.
+- An in-progress task shows a turning spinner, in blue. It is a static `◐` when `animateTaskIcons` is off or Claude Code's `prefersReducedMotion` setting is on.
 - Press the `↗` at the end of a heading or task row to open the file at that line in VS Code. This needs the `code` command on your `PATH`.
 - Headings that contain a milestone keyword show a flag, filled once every task beneath is done.
 - The toolbar refreshes (`r`), hides or shows completed tasks (`f`), and expands or collapses everything (`e` / `c`).
@@ -41,7 +44,25 @@ The pane re-reads a task file within about two seconds of it changing on disk, a
 
 ## Settings
 
-Set these in the mod's configuration (`/config`, or `pluginConfigs` in settings). They mirror the extension's settings of the same names.
+The settings mirror the extension's settings of the same names. There are two ways to change one.
+
+**In Claude Code.** Run `/config` and find the mod's rows. There is one per setting, labelled with its title: "State template" for `stateTemplate`, "Animate task icons" for `animateTaskIcons`, and so on. `stateTemplate` is a picker over its three values. A change made here reloads the mod with the new value, so no restart is needed.
+
+**In the settings file.** Edit `~/.claude/settings.json` and set the value under `pluginConfigs`. This example switches to the Obsidian Tasks template:
+
+```json
+{
+  "pluginConfigs": {
+    "md-taskview@claude-md-taskview": {
+      "options": {
+        "stateTemplate": "Obsidian Tasks"
+      }
+    }
+  }
+}
+```
+
+The key is the mod's name and its marketplace. A mod loaded with `--plugin-dir` is keyed `md-taskview` instead. An edit to the file takes effect in the next session you start.
 
 The dialog shown at install does not fill in the defaults of the text settings: those fields start empty. Leave one empty and its default applies; you do not have to type it.
 
@@ -49,21 +70,25 @@ The dialog shown at install does not fill in the defaults of the text settings: 
 | :--- | :--- | :--- |
 | `specPathPattern` | `spec/*` | Where spec folders are, relative to the working directory. `*` matches one folder level. |
 | `taskFileName` | `tasks.md` | The task file inside each spec folder. |
-| `stateTemplate` | `Standard (GFM)` | `Standard (GFM)`, `Obsidian Tasks`, or `Custom`. |
+| `stateTemplate` | `Standard (GFM)` | `Standard (GFM)`: done and not done only. `Obsidian Tasks`: also in progress `[/]`, cancelled `[-]`, needs clarification `[?]` and important `[!]`. `Custom`: your own template. |
 | `customTemplatePath` | (empty) | Path to a `*.jsonc` state template, used when `stateTemplate` is `Custom`. |
 | `strikeThroughCompleted` | `true` | Strike through and dim completed and cancelled tasks. |
+| `animateTaskIcons` | `true` | Show a turning spinner for in-progress tasks. When off, or when Claude Code's `prefersReducedMotion` is on, a static icon is shown instead. |
 | `showProgressCount` | `true` | Show `(done/total)` beside groups and headings. |
 | `hideCompletedByDefault` | `false` | Start with completed tasks hidden. |
 | `useH1AsGroupName` | `false` | Name a group after the first level-1 heading in its task file instead of its folder. |
 | `milestoneKeywords` | `Milestone, Release, Alpha, Beta` | Comma-separated keywords that mark a heading as a milestone. |
 
-A custom template uses the same `*.jsonc` format as the extension; see [its README](https://github.com/coreyx/vscode-md-taskview#-custom-state-template-example-jsonc).
+A custom template uses the same `*.jsonc` format as the extension; see [its README](https://github.com/coreyx/vscode-md-taskview#-custom-state-template-example-jsonc). Give a state an `animatedIcon` (any value, such as `"loading~spin"`) and it draws with the spinner. A press follows each state's own `nextState`.
 
 ## Differences from the VS Code extension
 
 - **Toggling writes straight to disk, with no undo.** There is no editor buffer or undo stack. A toggle re-reads the file, checks the bracket is still where it was parsed, and writes the file back. If something else edits the same file in the milliseconds between that read and write, one of the two edits is lost.
 - **Live sync is polling.** Mods have no file watcher, so the pane checks modification times about every 1.5 seconds.
 - **No right-click menus.** The state picker replaces "Set Task State"; the toolbar replaces the section menus.
+- **No editor task actions.** The extension's Start, Continue and Mark done actions are CodeLens in its text editor and entries in its tree menu. A pane has neither; pressing a task does the same job.
+- **In-progress tasks are blue**, where the extension draws them yellow.
+- **Reduced motion follows Claude Code**, through its `prefersReducedMotion` setting, not VS Code's `accessibility.reducedMotion`. The spinner needs the terminal or the Desktop Code tab; other surfaces show the static icon.
 - **Jump-to-source opens VS Code only**, at the line, in its text editor. There are no Markdown-preview navigation modes and no "Create Sample Spec" command.
 - **Spec folders are found one level per `*`.** `spec/*` finds `spec/<name>/tasks.md`; it does not search deeper folders, and there are no separate include and exclude patterns.
 - **Strikethrough depends on the Claude Code build.** Older builds cannot strike through the label of a pressable row, so completed tasks are dimmed there instead.
