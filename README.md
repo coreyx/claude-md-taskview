@@ -34,7 +34,7 @@ Run `/md-tasks` in a folder that holds `spec/<name>/tasks.md` files. The pane op
 - Press a task to move it to its next state. The file on disk changes by exactly one character.
   - With the **Standard (GFM)** template a press toggles not done `[ ]` and done `[x]`, and nothing else is ever written.
   - With the **Obsidian Tasks** template a press goes not started `[ ]`, in progress `[/]`, done `[x]`, then back to not started.
-- An in-progress task shows a turning spinner, in blue. It is a static `◐` when `animateTaskIcons` is off or Claude Code's `prefersReducedMotion` setting is on.
+- An in-progress task shows a turning spinner, in blue. It is a static `◐` when `animateTaskIcons` is off or Claude Code's `prefersReducedMotion` setting is on. At most twelve spinners turn at once; in-progress tasks past the twelfth show the static `◐`.
 - Press the `↗` at the end of a heading or task row to open the file at that line in VS Code. This needs the `code` command on your `PATH`.
 - Headings that contain a milestone keyword show a flag, filled once every task beneath is done.
 - The toolbar refreshes (`r`), hides or shows completed tasks (`f`), and expands or collapses everything (`e` / `c`).

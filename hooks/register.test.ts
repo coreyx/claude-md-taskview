@@ -379,9 +379,23 @@ for (const surface of SURFACES) {
     expect((await ui.find({ type: 'Button', key: 't-0-1' }))?.props).toMatchObject({ label: 'Build it' });
 
     expect((await ui.find({ type: 'Text', in: 'a-t-0-1' }))?.text).toBe('⠋');
-    await ui.advance(80);
+    await ui.advance(120);
     expect((await ui.find({ type: 'Text', in: 'a-t-0-1' }))?.text).toBe('⠙');
     expect((await ui.find({ type: 'Text', in: 'a-t-0-1' }))?.props).toMatchObject({ color: 'suggestion' });
+    await ui.unmount();
+  });
+
+  test(`${surface}: at most twelve spinners turn at once; the rest draw the static glyph`, OBSIDIAN, async ($, on) => {
+    const lines = Array.from({ length: 14 }, (_, index) => `- [/] Task ${index + 1}`);
+    world(on, { [AUTH_PATH]: `${lines.join('\n')}\n` });
+    const ui = await open($);
+
+    const spinners = await ui.findAll({ type: 'Client' });
+    expect(spinners).toHaveLength(12);
+    expect(spinners.at(-1)?.key).toBe('a-t-0-11');
+    // The thirteenth is still an in-progress task, and still pressable.
+    expect((await ui.find({ key: 't-0-12' }))?.text).toContain('◐');
+    expect((await ui.find({ key: 't-0-12' }))?.text).toContain('Task 13');
     await ui.unmount();
   });
 

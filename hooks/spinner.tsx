@@ -1,7 +1,10 @@
 import type { ClientModule } from 'claude-code';
 
 const FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
-const FRAME_MS = 80;
+// Slower than the 80 ms a terminal spinner usually runs at. The Desktop Code tab stops spinners that
+// redraw too often in total: twenty at 80 ms failed there, twelve did not, and twenty at 160 ms did not.
+// With MAX_SPINNERS in register.tsx this keeps a full pane at 100 redraws a second.
+const FRAME_MS = 120;
 
 /**
  * The in-progress spinner: one cell that steps through the frames on the

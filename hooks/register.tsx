@@ -20,6 +20,12 @@ const COMMAND = 'md-tasks';
 const POLL_MS = 1500;
 const INDENT = '  ';
 const OPEN_TIMEOUT_MS = 15000;
+/**
+ * How many spinners one drawing of the pane may hold; in-progress tasks past
+ * that draw the static glyph. The Desktop Code tab stops every spinner once
+ * too many redraw at once (see FRAME_MS in spinner.tsx).
+ */
+const MAX_SPINNERS = 12;
 /** Columns the open control takes at the end of a row: a space and the arrow. */
 const OPEN_WIDTH = 2;
 // `cmd /c` re-reads its arguments as a command line, so a path holding one of these could run something else.
@@ -373,17 +379,20 @@ export const register: Register = (on, options) => {
       </Box>
     );
 
+    let spinnersDrawn = 0;
+
     /**
      * Draws a task row with the spinner for its glyph. A `Client` cannot sit
      * inside a Button, so the row is the spinner and then the label as the
      * Button; the spinner posts its own clicks (see the `ui.message` hook).
      *
-     * @returns The row, or undefined when this build threw on the `Client`, which is then not tried again here.
+     * @returns The row; or undefined when the pane already holds MAX_SPINNERS, or this build threw on the `Client`, which is then not tried again here.
      */
     const drawSpinning = (row: TaskRow, indent: string, onPress: () => void): RenderElement | undefined => {
-      if (Client === undefined) return undefined;
+      if (Client === undefined || spinnersDrawn >= MAX_SPINNERS) return undefined;
 
       try {
+        spinnersDrawn += 1;
         return (
           <Box>
             <Text>{indent}</Text>

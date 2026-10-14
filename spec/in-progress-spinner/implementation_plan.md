@@ -24,17 +24,17 @@ Mirrors the spinner the VS Code extension gained in v0.1.13 (commit `059524e`): 
 
 None blocking. The spike (section 0) decides one thing: whether the spinner is a `Client` element, or, if that draws badly on either surface, a redraw of the pane on a timer. Record the result here before starting section 2.
 
-**Result, 2026-10-13: the spinner is a `Client` element.** In the terminal the spike's spinners turned, lined up with static rows, passed clicks on to the mod, stayed out of the Tab order, and twenty of them left the pane responsive. Section 2 was built on that, ahead of the Desktop Code tab check, because the pane falls back to the static glyph wherever a `Client` is missing or refused. If the Desktop check finds the `Client` draws badly there, the remedy is to leave Desktop on the static glyph or add the timed redraw for it; reopen this question then.
+**Result, 2026-10-13: the spinner is a `Client` element.** In the terminal the spike's spinners turned, lined up with static rows, passed clicks on to the mod, stayed out of the Tab order, and twenty of them left the pane responsive. Section 2 was built on that, ahead of the Desktop Code tab check, because the pane falls back to the static glyph wherever a `Client` is missing or refused. The Desktop Code tab check then found the `Client` draws well there but stops when too many redraw at once: twenty at 80 ms failed, twelve did not, and twenty at 160 ms did not. So the spinner runs at 120 ms, at most twelve are drawn, and a surface where one fails goes back to the static glyph. The timed redraw was not needed.
 
 ## Proposed Changes
 
 ### 0. Spike (do first; throwaway)
 
 #### [NEW] `scratch/spinner-spike/` (plugin.json, hooks.json, register.tsx, spinner.tsx)
-- [ ] Draw a row of `Text` indent, a one-column `Client` cycling braille frames on `surface.every`, and a plain `Button` label, on the terminal and in the Desktop Code tab; record whether the glyph lines up with a static `◐` row above and below it.
-- [ ] Draw twenty such rows; record whether the pane stays responsive and whether scrolling and the focus ring behave (Tab should reach the label, not stop on the spinner).
-- [ ] Have the module `post` on a pointer `down` and count the `ui.message` events in the hooks module; record whether a click on the glyph arrives on each surface.
-- [ ] Write the results into `spec/claude-md-taskview/HANDOFF.md` and the decision into Open Questions above.
+- [x] Draw a row of `Text` indent, a one-column `Client` cycling braille frames on `surface.every`, and a plain `Button` label, on the terminal and in the Desktop Code tab; record whether the glyph lines up with a static `◐` row above and below it. (Lines up on both surfaces.)
+- [x] Draw twenty such rows; record whether the pane stays responsive and whether scrolling and the focus ring behave (Tab should reach the label, not stop on the spinner). (Fine in the terminal. In the Desktop Code tab twenty failed at 80 ms: twelve was the most that kept going, and twenty kept going at 160 ms. Tab stops on labels only in the terminal; in the Desktop Code tab the focus event fired on clicks, not on Tab.)
+- [x] Have the module `post` on a pointer `down` and count the `ui.message` events in the hooks module; record whether a click on the glyph arrives on each surface. (A click on the glyph arrives on both surfaces.)
+- [x] Write the results into `spec/claude-md-taskview/HANDOFF.md` and the decision into Open Questions above.
 
 ### 1. Core (re-copy from the extension at `059524e`)
 
@@ -66,12 +66,12 @@ None blocking. The spike (section 0) decides one thing: whether the spinner is a
 - [x] Add `isAnimated: boolean` to `TaskRow`: true when the task's state has an `animatedIcon`. Any value means the one animation the pane has, the spinner.
 
 #### [NEW] `hooks/spinner.tsx`
-- [x] A surface module (default export) that draws one `Text` holding the current frame of `⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏`, in the colour passed in its props, and advances a frame every 80 ms with `surface.every`, started once while its state is still undefined.
+- [x] A surface module (default export) that draws one `Text` holding the current frame of `⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏`, in the colour passed in its props, and advances a frame every 80 ms with `surface.every`, started once while its state is still undefined. (The frame is 120 ms, not 80: see the spike result on the Desktop Code tab's limit.)
 - [x] On a pointer `down`, `post` a press, if the spike found that reliable. (Kept: the spike showed a click on the glyph arriving in the terminal.)
 
 #### [MODIFY] `hooks/register.tsx`
 - [x] Add a top-level `isMotionAllowed($, mod)`: true when `animateTaskIcons` is on and `$.settings.read()` does not have `prefersReducedMotion: true`. A failed read counts as motion allowed.
-- [x] In the render hook, draw a task row whose `isAnimated` is set, when motion is allowed and the surface's table has `Client`, as: `Text` indent, `Client` keyed `a-<row key>` with `module: './spinner.tsx'` and a width of one column, a space, a plain `Button` under the row's key holding the label, then the `↗` control. If making the `Client` throws, fall back to the static row and remember that for the surface, as the rich-row fallback does. (The surface is asked by name, `terminal` or `desktop`, not by whether its table has `Client`: a table is completed with the elements its surface lacks, and those draw nothing.)
+- [x] In the render hook, draw a task row whose `isAnimated` is set, when motion is allowed and the surface's table has `Client`, as: `Text` indent, `Client` keyed `a-<row key>` with `module: './spinner.tsx'` and a width of one column, a space, a plain `Button` under the row's key holding the label, then the `↗` control. If making the `Client` throws, fall back to the static row and remember that for the surface, as the rich-row fallback does. (The surface is asked by name, `terminal` or `desktop`, not by whether its table has `Client`: a table is completed with the elements its surface lacks, and those draw nothing.) (At most twelve rows of one drawing get a spinner, and a `ui.fault` hook puts a surface back on the static glyph if a spinner fails there.)
 - [x] Otherwise draw the row as now, with the static glyph.
 - [x] If the spike found glyph presses reliable: an `on('ui.message', …)` hook for the pane that maps a spinner's key back to its task and moves it to its next state, as pressing the label does. (Kept. The hook finds the task with `findTask` in `hooks/rows.ts`.)
 
