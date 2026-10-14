@@ -66,8 +66,8 @@ None blocking. The spike (section 0) decides one thing: whether the spinner is a
 - [x] Add `isAnimated: boolean` to `TaskRow`: true when the task's state has an `animatedIcon`. Any value means the one animation the pane has, the spinner.
 
 #### [NEW] `hooks/spinner.tsx`
-- [ ] A surface module (default export) that draws one `Text` holding the current frame of `⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏`, in the colour passed in its props, and advances a frame every 80 ms with `surface.every`, started once while its state is still undefined.
-- [ ] On a pointer `down`, `post` a press, if the spike found that reliable.
+- [x] A surface module (default export) that draws one `Text` holding the current frame of `⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏`, in the colour passed in its props, and advances a frame every 80 ms with `surface.every`, started once while its state is still undefined.
+- [x] On a pointer `down`, `post` a press, if the spike found that reliable. (Kept: the spike showed a click on the glyph arriving in the terminal.)
 
 #### [MODIFY] `hooks/register.tsx`
 - [ ] Add a top-level `isMotionAllowed($, mod)`: true when `animateTaskIcons` is on and `$.settings.read()` does not have `prefersReducedMotion: true`. A failed read counts as motion allowed.
