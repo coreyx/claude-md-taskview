@@ -89,7 +89,10 @@ None blocking; see the plan's Open Questions for the decisions made.
 - **The install dialog does not pre-fill a text setting's `default`.** The docs define `default` as the "value used when the user provides nothing", and the fields start empty. The owner typed `/spec/*` and `Milestone` into two of them, and those are what `pluginConfigs` now holds. Both work (a leading slash is ignored), but only "Milestone" marks a milestone there. The descriptions now name each default, released as v0.1.1.
 - **A manifest `version` pins installs to it.** A fix reaches an installed copy only when `version` changes, so anything after v0.1.0 needs a new release to be seen.
 
-## Next steps
+## Next steps for the spinner (spec/in-progress-spinner)
+Every item in its plan is checked off and its [walkthrough](../in-progress-spinner/walkthrough.md) is written (2026-10-13). Unreleased; `main` is ahead of `origin`. Remaining: the walkthrough's manual steps on the real pane, then release as 0.2.0 on the owner's word.
+
+## Next steps (first release, done)
 1. Done on 2026-10-09: the command is `/md-tasks` only, by the owner's decision. Worth one live run to see it open the pane; the manual checks used the earlier `/tasks`.
 2. Owner's decision, open: install the mod from a marketplace (the folder, or GitHub once pushed) and remove `env.CLAUDE_CODE_PLUGIN_DIRS` from `~/.claude/settings.json`.
 3. Release v0.1.0 is prepared (2026-10-09): changelog finalised, `RELEASE_NOTES.md` written, versions already at 0.1.0. Tagged `v0.1.0` at `0a04fc2` and pushed, with `main`, to `origin` (`coreyx/claude-md-taskview`) on the owner's go-ahead. No GitHub release has been created from the tag. The marketplace install line in the README has not been tried yet.
