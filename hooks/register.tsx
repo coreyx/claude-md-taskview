@@ -18,7 +18,12 @@ export const contractMatchesCore: Same<SpecGroup, ContractSpecGroup> = true;
 const PANE = 'md-tasks';
 const COMMAND = 'md-tasks';
 const POLL_MS = 1500;
-const INDENT = '  ';
+/**
+ * Columns a row moves right per level of nesting. The indent is padding on
+ * the row's Box, never spaces in its text: the Desktop Code tab drops the
+ * spaces a Button's content starts with, which flattened the tree there.
+ */
+const INDENT_COLUMNS = 2;
 const OPEN_TIMEOUT_MS = 15000;
 /**
  * How many spinners one drawing of the pane may hold; in-progress tasks past
@@ -370,9 +375,15 @@ export const register: Register = (on, options) => {
       return label.length > room ? `${label.slice(0, room - 1)}…` : label;
     };
 
-    /** Adds the jump-to-source control after a row; pressing the row itself still toggles it. */
-    const withOpen = (rowElement: RenderElement, key: string, filePath: string, line: number): RenderElement => (
-      <Box>
+    /** Indents a row and adds the jump-to-source control after it; pressing the row itself still toggles it. */
+    const withOpen = (
+      rowElement: RenderElement,
+      key: string,
+      filePath: string,
+      line: number,
+      indent: number,
+    ): RenderElement => (
+      <Box paddingLeft={indent}>
         {rowElement}
         <Text> </Text>
         <Button key={`o-${key}`} plain dimColor label="↗" onPress={() => void openSource($, filePath, line)} />
@@ -388,14 +399,13 @@ export const register: Register = (on, options) => {
      *
      * @returns The row; or undefined when the pane already holds MAX_SPINNERS, or this build threw on the `Client`, which is then not tried again here.
      */
-    const drawSpinning = (row: TaskRow, indent: string, onPress: () => void): RenderElement | undefined => {
+    const drawSpinning = (row: TaskRow, indent: number, onPress: () => void): RenderElement | undefined => {
       if (Client === undefined || spinnersDrawn >= MAX_SPINNERS) return undefined;
 
       try {
         spinnersDrawn += 1;
         return (
           <Box>
-            <Text>{indent}</Text>
             <Client
               key={`a-${row.key}`}
               module="./spinner.tsx"
@@ -407,7 +417,7 @@ export const register: Register = (on, options) => {
               key={row.key}
               plain
               dimColor={row.isStruck}
-              label={fit(row.task.cleanText, indent.length + 2 + OPEN_WIDTH)}
+              label={fit(row.task.cleanText, indent + 2 + OPEN_WIDTH)}
               onPress={onPress}
             />
           </Box>
@@ -419,10 +429,10 @@ export const register: Register = (on, options) => {
     };
 
     const drawRow = (row: Row): RenderElement | RenderElement[] => {
-      const indent = INDENT.repeat(row.depth);
+      const indent = row.depth * INDENT_COLUMNS;
 
       if (row.kind === 'task') {
-        const lead = `${indent}${row.glyph} `;
+        const lead = `${row.glyph} `;
         const press = (): void => void setTaskState($, mod, row.task, getNextState(template, row.task.char).char);
         const rowElement = withOpen(
           (row.isAnimated && isSpinning && drawSpinning(row, indent, press)) ||
@@ -432,7 +442,7 @@ export const register: Register = (on, options) => {
               key: row.key,
               before: [{ text: lead, ...(row.color === undefined ? {} : { color: row.color }) }],
               label: {
-                text: fit(row.task.cleanText, lead.length + OPEN_WIDTH),
+                text: fit(row.task.cleanText, indent + lead.length + OPEN_WIDTH),
                 ...(row.isStruck ? { strikethrough: true, dimColor: true } : {}),
               },
               after: [],
@@ -443,13 +453,14 @@ export const register: Register = (on, options) => {
           row.key,
           row.task.filePath,
           row.task.line,
+          indent,
         );
         if (Select === undefined || template.states.length <= 2 || row.key !== focusedKey) return rowElement;
 
         // Replaces the extension's right-click "Set Task State" menu.
         return [
           rowElement,
-          <Box paddingLeft={lead.length}>
+          <Box paddingLeft={indent + lead.length}>
             <Select
               key={`s-${row.key}`}
               label="State"
@@ -470,14 +481,14 @@ export const register: Register = (on, options) => {
       const chevron = row.isCollapsed ? '▸ ' : '▾ ';
       const flag = row.kind === 'heading' && row.isMilestone ? (row.isComplete ? '⚑ ' : '⚐ ') : '';
       const count = row.count === '' ? '' : ` ${row.count}`;
-      const used = indent.length + chevron.length + flag.length + count.length + OPEN_WIDTH;
+      const used = indent + chevron.length + flag.length + count.length + OPEN_WIDTH;
 
       const rowElement = drawPressable(
         el,
         {
           key: row.key,
           before: [
-            { text: `${indent}${chevron}` },
+            { text: chevron },
             { text: flag, ...(row.kind === 'heading' && row.isComplete ? { color: 'success' } : {}) },
           ],
           label: { text: fit(row.kind === 'group' ? row.title : row.label, used), bold: row.kind === 'group' },
@@ -490,7 +501,8 @@ export const register: Register = (on, options) => {
         nesting,
       );
 
-      return row.kind === 'heading' ? withOpen(rowElement, row.key, row.filePath, row.line) : rowElement;
+      // A group is the outermost level, so it has no indent to carry.
+      return row.kind === 'heading' ? withOpen(rowElement, row.key, row.filePath, row.line, indent) : rowElement;
     };
 
     return (

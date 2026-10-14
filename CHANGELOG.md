@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Flattened tree in the Desktop Code tab:** headings and tasks drew at one level there instead of indented under their parents. The indent was spaces at the start of each row's Button, which the Desktop Code tab drops. Rows are now indented by padding.
+
 ## [0.2.0] - 2026-10-13
 
 ### Added

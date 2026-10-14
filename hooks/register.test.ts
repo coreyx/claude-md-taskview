@@ -143,6 +143,31 @@ for (const surface of SURFACES) {
     await ui.unmount();
   });
 
+  test(`${surface}: rows are indented by padding, never by spaces a surface may drop`, async ($, on) => {
+    world(on, { [AUTH_PATH]: AUTH });
+    const ui = await start($);
+
+    /** Padding of the innermost indented Box around the row showing `label`. */
+    const indentOf = async (label: string) => {
+      const boxes = (await ui.findAll({ type: 'Box', text: label })).filter(
+        (box) => typeof box.props.paddingLeft === 'number',
+      );
+      return boxes.sort((a, b) => a.text.length - b.text.length)[0]?.props.paddingLeft;
+    };
+
+    // "# Milestone 1" holds two tasks and "## Details", which holds one more.
+    expect(await indentOf('Milestone 1: Setup')).toBe(2);
+    expect(await indentOf('Write tests')).toBe(4);
+    expect(await indentOf('Details')).toBe(4);
+    expect(await indentOf('Sub item')).toBe(6);
+
+    // The Desktop Code tab drops spaces at the start of a Button's content, so none may carry meaning.
+    for (const button of await ui.findAll({ type: 'Button' })) {
+      expect(button.text.startsWith(' ')).toBe(false);
+    }
+    await ui.unmount();
+  });
+
   test(`${surface}: pressing a task changes one character on disk and redraws it done`, async ($, on) => {
     const disk = world(on, { [AUTH_PATH]: AUTH });
     const ui = await start($);
