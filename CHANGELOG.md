@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **State picker:** with a multi-state template, each task row now ends with a `○` control that opens the picker of every state beneath the task. It used to appear under whichever task had the keyboard focus, which the Desktop Code tab only reported after the task had been pressed, and a press also changes the task.
+
 ### Fixed
 - **Flattened tree in the Desktop Code tab:** headings and tasks drew at one level there instead of indented under their parents. The indent was spaces at the start of each row's Button, which the Desktop Code tab drops. Rows are now indented by padding.
 - **Completed tasks in the Desktop Code tab:** they drew like any other task there, neither struck through nor dimmed, because the Desktop Code tab ignores the styles of text inside a row's Button. Outside the terminal a completed task's label is now struck through in its characters, as the VS Code extension does, and the Button itself is dimmed.

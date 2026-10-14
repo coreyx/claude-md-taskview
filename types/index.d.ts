@@ -64,8 +64,8 @@ declare module 'claude-code' {
       hideCompleted: boolean;
       /** Why the last refresh failed, or null when it did not. */
       error: string | null;
-      /** Element key of the task row holding the focus ring, for the state picker. */
-      focused: string | null;
+      /** Element key of the task row whose state picker is open, or null when none is. */
+      picker: string | null;
     };
   }
 }
