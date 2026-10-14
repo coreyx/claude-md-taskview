@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **State picker:** it appears beneath the focused task again, as in v0.2.0, and the `○` control v0.3.0 added at the end of each task row is gone. In the Desktop Code tab the focus is reported only when a task is pressed, so there the picker appears after a press.
+
 ## [0.3.0] - 2026-10-13
 
 ### Changed

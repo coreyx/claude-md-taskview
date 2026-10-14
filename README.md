@@ -38,7 +38,7 @@ Run `/md-tasks` in a folder that holds `spec/<name>/tasks.md` files. The pane op
 - Press the `↗` at the end of a heading or task row to open the file at that line in VS Code. This needs the `code` command on your `PATH`.
 - Headings that contain a milestone keyword show a flag, filled once every task beneath is done.
 - The toolbar refreshes (`r`), hides or shows completed tasks (`f`), and expands or collapses everything (`e` / `c`).
-- With a multi-state template, each task row ends with a `○`. Press it to open a picker of every state beneath the task, and pick one to set it directly; the task is not changed until you pick. Press `○` again to close the picker.
+- With a multi-state template, a picker beneath the focused task sets any state directly. In the terminal it follows the keyboard focus; the Desktop Code tab reports the focus only when a task is pressed, so there it appears after a press.
 
 The pane re-reads a task file within about two seconds of it changing on disk, and at once after Claude edits one.
 
@@ -85,7 +85,7 @@ A custom template uses the same `*.jsonc` format as the extension; see [its READ
 
 - **Toggling writes straight to disk, with no undo.** There is no editor buffer or undo stack. A toggle re-reads the file, checks the bracket is still where it was parsed, and writes the file back. If something else edits the same file in the milliseconds between that read and write, one of the two edits is lost.
 - **Live sync is polling.** Mods have no file watcher, so the pane checks modification times about every 1.5 seconds.
-- **No right-click menus.** The `○` control at the end of a task row opens the state picker, which replaces "Set Task State"; the toolbar replaces the section menus.
+- **No right-click menus.** The state picker beneath the focused task replaces "Set Task State"; the toolbar replaces the section menus.
 - **No editor task actions.** The extension's Start, Continue and Mark done actions are CodeLens in its text editor and entries in its tree menu. A pane has neither; pressing a task does the same job.
 - **In-progress tasks are blue**, where the extension draws them yellow.
 - **Reduced motion follows Claude Code**, through its `prefersReducedMotion` setting, not VS Code's `accessibility.reducedMotion`. The spinner needs the terminal or the Desktop Code tab; other surfaces show the static icon.
