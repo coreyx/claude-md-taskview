@@ -153,6 +153,22 @@ Some introductory paragraph text without tasks.
     expect(stripMarkdownFormatting('')).toBe('');
   });
 
+  it('should keep underscores inside words and remove only paired emphasis markers', () => {
+    const strip = stripMarkdownFormatting;
+    expect(strip('release_notes')).toBe('release_notes');
+    expect(strip('Milestone_notes')).toBe('Milestone_notes');
+    expect(strip('Mile__stone__ 1')).toBe('Mile__stone__ 1');
+    expect(strip('Mile_stone_ 1')).toBe('Mile_stone_ 1');
+    expect(strip('foo__bar__baz')).toBe('foo__bar__baz');
+    expect(strip('__init__')).toBe('init');
+    expect(strip('Mile**stone** 1')).toBe('Milestone 1');
+    expect(strip('_Milestone_ 1')).toBe('Milestone 1');
+    expect(strip('(_Milestone_) 1')).toBe('(Milestone) 1');
+    expect(strip('*Milestone 1')).toBe('*Milestone 1');
+    expect(strip('_Milestone 1')).toBe('_Milestone 1');
+    expect(strip('** Milestone** 1')).toBe('** Milestone** 1');
+  });
+
   it('should parse checklist items written as headings as tasks', () => {
     const spec = parse(`
 ## Milestone 1: Setup
@@ -446,6 +462,36 @@ describe('isMilestoneHeading', () => {
   it('matches a keyword wrapped in bold or italic markers in the source heading', () => {
     const spec = parse('## **Milestone 3**: Launch\n## _Release_ 2\n');
     expect(spec.headings.map((heading) => isMilestoneHeading(heading.label, keywords))).toEqual([true, true]);
+  });
+
+  it('treats an underscore as part of a word', () => {
+    expect(isMilestoneHeading('Milestone_notes', keywords)).toBe(false);
+    expect(isMilestoneHeading('release_notes', keywords)).toBe(false);
+    expect(isMilestoneHeading('Milestone_1', keywords)).toBe(false);
+  });
+
+  // Not upstream: each heading goes through the parse, so cleaning and matching are checked together.
+  it.each([
+    ['**Milestone** 1', 'Milestone 1', true],
+    ['__Milestone__ 1', 'Milestone 1', true],
+    ['_Milestone_ 1', 'Milestone 1', true],
+    ['*Milestone* 1', 'Milestone 1', true],
+    ['***Milestone*** 1', 'Milestone 1', true],
+    ['Mile**stone** 1', 'Milestone 1', true],
+    ['Milestone-1 checks', 'Milestone-1 checks', true],
+    ['Milestone_notes', 'Milestone_notes', false],
+    ['Milestone_1', 'Milestone_1', false],
+    ['release_notes', 'release_notes', false],
+    ['Mile__stone__ 1', 'Mile__stone__ 1', false],
+    ['*Milestone 1', '*Milestone 1', false],
+    ['_Milestone 1', '_Milestone 1', false],
+    ['** Milestone** 1', '** Milestone** 1', false],
+    ['2 * 3 = 6', '2 * 3 = 6', false],
+    ['__init__', 'init', false],
+  ])('heading "%s" cleans to "%s", milestone: %s', (heading, cleaned, isMilestone) => {
+    const label = parse(`## ${heading}\n`).headings[0]?.label;
+    expect(label).toBe(cleaned);
+    expect(isMilestoneHeading(label ?? '', ['Milestone'])).toBe(isMilestone);
   });
 
   it('does not falsely match normal headings or partial words', () => {

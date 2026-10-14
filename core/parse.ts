@@ -262,19 +262,22 @@ export function stripMarkdownFormatting(text: string): string {
 
   let clean = text;
 
+  // Underscore emphasis must start and end at a word edge: whitespace, a symbol, or punctuation other than
+  // '_' itself, so underscores doubled inside a word (Mile__stone__) stay literal as in CommonMark.
+
   // 1. Triple delimiters: ***text*** or ___text___ (bold + italic)
   clean = clean.replace(/\*\*\*([^\*\s](?:.*?[^\*\s])?)\*\*\*/g, '$1');
-  clean = clean.replace(/(?:^|(?<=[\s\p{P}\p{S}]))___([^_\s](?:.*?[^_\s])?)___(?=$|[\s\p{P}\p{S}])/gu, '$1');
+  clean = clean.replace(/(?:^|(?<=[\s\p{S}]|[^\P{P}_]))___([^_\s](?:.*?[^_\s])?)___(?=$|[\s\p{S}]|[^\P{P}_])/gu, '$1');
 
   // 2. Double delimiters: **text** or __text__ (bold)
   clean = clean.replace(/\*\*([^\*\s](?:.*?[^\*\s])?)\*\*/g, '$1');
-  clean = clean.replace(/(?:^|(?<=[\s\p{P}\p{S}]))__([^_\s](?:.*?[^_\s])?)__(?=$|[\s\p{P}\p{S}])/gu, '$1');
+  clean = clean.replace(/(?:^|(?<=[\s\p{S}]|[^\P{P}_]))__([^_\s](?:.*?[^_\s])?)__(?=$|[\s\p{S}]|[^\P{P}_])/gu, '$1');
 
   // 3. Single delimiter: *text* (italic with asterisks)
   clean = clean.replace(/(?<!\*)\*([^\*\s](?:.*?[^\*\s])?)\*(?!\*)/g, '$1');
 
   // 4. Single delimiter: _text_ (italic with underscores - CommonMark word boundary rules)
-  clean = clean.replace(/(?:^|(?<=[\s\p{P}\p{S}]))_([^_\s](?:.*?[^_\s])?)_(?=$|[\s\p{P}\p{S}])/gu, '$1');
+  clean = clean.replace(/(?:^|(?<=[\s\p{S}]|[^\P{P}_]))_([^_\s](?:.*?[^_\s])?)_(?=$|[\s\p{S}]|[^\P{P}_])/gu, '$1');
 
   return clean.trim();
 }
