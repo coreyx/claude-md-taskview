@@ -37,16 +37,17 @@ None blocking. The spike (section 0) decides one thing: whether the spinner is a
 ### 1. Core (re-copy from the extension at `059524e`)
 
 #### [MODIFY] `core/types.ts`
-- [ ] Add `animatedIcon?: string` to `StateDefinition`, as upstream: shown instead of `icon` when motion is enabled.
+- [x] Add `animatedIcon?: string` to `StateDefinition`, as upstream: shown instead of `icon` when motion is enabled.
 
 #### [MODIFY] `core/templates.ts`
 - [ ] Add `animatedIcon: 'loading~spin'` to the in-progress state of `OBSIDIAN_TEMPLATE`. `STANDARD_TEMPLATE` is untouched.
+- [ ] Give that state `color: 'charts.blue'` in place of upstream's `charts.yellow`, so in-progress tasks and their spinner draw blue (the `suggestion` theme key). Added at the owner's request on 2026-10-13, after approval; it is a deliberate difference from the extension, to be recorded in `UPSTREAM.md`.
 
 #### [MODIFY] `core/fixtures/obsidian.jsonc`
 - [ ] Re-copy from the extension's `resources/templates/obsidian.jsonc`, which gained the same field.
 
 #### [MODIFY] `core/core.spec.ts`
-- [ ] Assert the Obsidian in-progress state carries `animatedIcon`, that no Standard state does, and that `validateTemplate` keeps the field on a custom template. The existing fixture comparison then covers the re-copied file.
+- [ ] Assert the Obsidian in-progress state carries `animatedIcon`, that no Standard state does, and that `validateTemplate` keeps the field on a custom template. The fixture comparison covers the re-copied file, now setting aside the in-progress colour as well as the description.
 
 #### [MODIFY] `core/UPSTREAM.md`
 - [ ] Record the new source commit `059524e` (v0.1.13), what was taken from it, and what was left: the task action helpers, `collectTasks`, `TaskActionCommands.ts` and `TaskCodeLensProvider.ts`.

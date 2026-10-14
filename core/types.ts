@@ -10,6 +10,7 @@ export interface StateDefinition {
   id: string;
   label: string;
   icon: string;
+  animatedIcon?: string;   // Shown instead of `icon` when motion is enabled (e.g. 'loading~spin')
   color?: string;
   strikethrough?: boolean;
   countsAsCompleted?: boolean;
