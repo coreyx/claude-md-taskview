@@ -2,7 +2,7 @@
 
 An in-progress task now shows a turning blue spinner in the task pane, mirroring the spinner the VS Code extension gained in v0.1.13. A setting and Claude Code's reduced-motion setting turn it off. The Standard (GFM) template is unchanged: a press there is still only done and not done.
 
-Everything automated passes. The spinner has been seen running only in the throwaway spike, not yet in the real pane; that is the manual verification below.
+Everything automated passes, and the owner has checked the released v0.2.0 by hand: all seven checks in the test folder passed. Three of the steps below were not part of that list and remain open.
 
 ## What Was Implemented
 
@@ -67,7 +67,9 @@ Also `claude plugin validate .` reports no refusals, and `npm run typecheck` pas
 The 26 mod tests and 25 core tests from v0.1.1 still pass, with one updated: the state-picker test used to find `◐` in an in-progress row and now finds the spinner there. The extension repo was only read; its `git status` is clean.
 
 ## Manual Verification
-None of these has been done on the real pane. They need the new build loaded, either released and updated, or run from the working copy with the installed copy disabled.
+**Done on the released v0.2.0, 2026-10-13.** The owner ran the seven checks in `scratch/pane-test/README.md` (a throwaway folder with one task file showing every state and another with fourteen tasks in progress) and reported every one as passing. Those cover steps 1, 2, 3, 4, 6 and the twelve-spinner limit of step 7 below. Which surface they were run on was not said.
+
+**Not yet run:** step 5 (`prefersReducedMotion`), step 8 (the state picker in the Desktop Code tab), step 9 (CPU use over a few minutes), and, if the seven were run in the terminal, step 7 in the Desktop Code tab, which is the one place the limit matters.
 
 1. With `stateTemplate` set to `Obsidian Tasks`, run `/md-tasks` in a folder with task files: a `[/]` task shows a blue spinner turning, in the terminal and in the Desktop Code tab.
 2. Press a not-started task: it becomes in progress and starts spinning. Press it again: done. Again: not started. `git diff` shows one character changed each time.
@@ -83,5 +85,5 @@ None of these has been done on the real pane. They need the new build loaded, ei
 - **State picker in the Desktop Code tab.** If step 8 shows the picker cannot be reached by keyboard there, it needs another trigger on that surface.
 - **The Desktop limit is the app's, and may move.** The app stopped the twenty spinners with the reason `flooded the page with messages`, so it is a rate limit on what the spinners send the page. Where exactly it sits between 150 and 250 redraws a second is not known. If it changes, `FRAME_MS` and `MAX_SPINNERS` are the two numbers to revisit.
 - **In-progress stays yellow in the extension.** The blue is this mod's alone unless the extension follows.
-- **Release.** This is unreleased; it would be 0.2.0. Installed copies stay on 0.1.1 until then.
-- **The spikes** are still in `scratch/` (`mod-spike`, `spinner-spike`), untracked. Copies also sit in this session's hot-reload folder. They can be deleted.
+- **Released as v0.2.0** on 2026-10-13.
+- **The spikes and the test folder** are still in `scratch/` (`mod-spike`, `spinner-spike`, `pane-test`), untracked. Copies also sit in this session's hot-reload folder. They can be deleted.
