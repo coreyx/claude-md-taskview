@@ -63,7 +63,7 @@ None blocking. The spike (section 0) decides one thing: whether the spinner is a
 - [x] Add `animateTaskIcons: boolean` to `Settings`, read with a default of `true`.
 
 #### [MODIFY] `hooks/rows.ts`
-- [ ] Add `isAnimated: boolean` to `TaskRow`: true when the task's state has an `animatedIcon`. Any value means the one animation the pane has, the spinner.
+- [x] Add `isAnimated: boolean` to `TaskRow`: true when the task's state has an `animatedIcon`. Any value means the one animation the pane has, the spinner.
 
 #### [NEW] `hooks/spinner.tsx`
 - [ ] A surface module (default export) that draws one `Text` holding the current frame of `⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏`, in the colour passed in its props, and advances a frame every 80 ms with `surface.every`, started once while its state is still undefined.

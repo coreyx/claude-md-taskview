@@ -41,6 +41,12 @@ export interface TaskRow extends RowBase {
   color: string | undefined;
   /** True when the label is drawn struck through and dimmed. */
   isStruck: boolean;
+  /**
+   * True when the state names an `animatedIcon`. The pane has one animation,
+   * the spinner, so any value means that; whether it is shown is the pane's
+   * call (the setting, reduced motion, the surface).
+   */
+  isAnimated: boolean;
 }
 
 export type Row = GroupRow | HeadingRow | TaskRow;
@@ -104,6 +110,38 @@ export function buildRows(groups: readonly SpecGroup[], options: RowOptions): Ro
   return rows;
 }
 
+/**
+ * Finds the task a task row's key names, in the groups as they are now.
+ *
+ * A key is `t-<group index>-<line>`; the spinner of that row is keyed with an
+ * `a-` in front, so either form is accepted.
+ *
+ * @returns The task, or undefined when the key is no task's or the file has since changed shape.
+ */
+export function findTask(groups: readonly SpecGroup[], key: string): TaskNode | undefined {
+  const match = /^(?:a-)?t-(\d+)-(\d+)$/.exec(key);
+  const group = match ? groups[Number(match[1])] : undefined;
+  if (!match || !group) return undefined;
+
+  const line = Number(match[2]);
+  const among = (tasks: TaskNode[]): TaskNode | undefined => {
+    for (const task of tasks) {
+      const found = task.line === line ? task : among(task.subTasks);
+      if (found) return found;
+    }
+    return undefined;
+  };
+  const under = (headings: HeadingNode[]): TaskNode | undefined => {
+    for (const heading of headings) {
+      const found = among(heading.tasks) ?? under(heading.children);
+      if (found) return found;
+    }
+    return undefined;
+  };
+
+  return among(group.rootTasks) ?? under(group.headings);
+}
+
 /** Ids of everything that can collapse: every spec group and heading. */
 export function collapsibleIds(groups: readonly SpecGroup[]): string[] {
   const ids: string[] = [];
@@ -162,6 +200,7 @@ function addTasks(rows: Row[], tasks: TaskNode[], groupIndex: number, depth: num
       glyph: GLYPH_BY_ICON[state.icon] ?? (state.char.trim() || '•'),
       color: state.color === undefined ? undefined : THEME_KEY_BY_COLOR[state.color],
       isStruck: state.strikethrough === true && options.settings.strikeThroughCompleted,
+      isAnimated: state.animatedIcon !== undefined,
     });
     addTasks(rows, task.subTasks, groupIndex, depth + 1, options);
   }
