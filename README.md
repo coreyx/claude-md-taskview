@@ -91,7 +91,7 @@ A custom template uses the same `*.jsonc` format as the extension; see [its READ
 - **Reduced motion follows Claude Code**, through its `prefersReducedMotion` setting, not VS Code's `accessibility.reducedMotion`. The spinner needs the terminal or the Desktop Code tab; other surfaces show the static icon.
 - **Jump-to-source opens VS Code only**, at the line, in its text editor. There are no Markdown-preview navigation modes and no "Create Sample Spec" command.
 - **Spec folders are found one level per `*`.** `spec/*` finds `spec/<name>/tasks.md`; it does not search deeper folders, and there are no separate include and exclude patterns.
-- **Strikethrough depends on the Claude Code build.** Older builds cannot strike through the label of a pressable row, so completed tasks are dimmed there instead.
+- **Strikethrough is drawn two ways.** The terminal strikes a completed task's label through as a text style; on builds too old to style a pressable row's label, it is only dimmed there. The Desktop Code tab ignores that style, so there the label carries a stroke on each character, the way the extension draws it.
 - The pane exists only in Claude Code surfaces (terminal, Desktop Code tab), not in regular Claude chat.
 
 ## Develop

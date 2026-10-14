@@ -2,7 +2,7 @@ import type { On, RenderElement } from 'claude-code';
 import { expect, mock, test } from 'claude-code/testing';
 import type { Engine } from 'claude-code/testing';
 
-import { drawPressable } from './register';
+import { drawPressable, strikeThrough } from './register';
 import type { RowElements } from './register';
 
 const SURFACES = ['terminal', 'desktop'] as const;
@@ -125,6 +125,10 @@ function world(on: On, files: Record<string, string>, takenCommands: string[] = 
 }
 
 for (const surface of SURFACES) {
+  // How a completed task's label reads: the terminal strikes it through with a Text style, the
+  // Desktop Code tab ignores that style inside a Button, so there the characters carry the stroke.
+  const done = (label: string) => (surface === 'terminal' ? label : strikeThrough(label));
+
   const start = async ($: Engine) => {
     await $.session.start({ cwd: CWD, surface, isInteractive: true });
     return $.ui.mount({ plugin: 'md-taskview', surface, component: 'Pane', requestId: 'md-tasks', props: PANE });
@@ -138,7 +142,7 @@ for (const surface of SURFACES) {
     expect((await ui.find({ key: 'g-1' }))?.text).toContain('billing (0/2)');
     expect((await ui.find({ key: 'h-0-0' }))?.text).toContain('Milestone 1: Setup (2/3)');
     // Bold markers are stripped by the copied parser, whose lookbehind patterns must run in this engine.
-    expect((await ui.find({ key: 't-0-1' }))?.text).toContain('Scaffold the project');
+    expect((await ui.find({ key: 't-0-1' }))?.text).toContain(done('Scaffold the project'));
     expect(disk.commands).toEqual(['md-tasks']);
     await ui.unmount();
   });
@@ -159,7 +163,7 @@ for (const surface of SURFACES) {
     expect(await indentOf('Milestone 1: Setup')).toBe(2);
     expect(await indentOf('Write tests')).toBe(4);
     expect(await indentOf('Details')).toBe(4);
-    expect(await indentOf('Sub item')).toBe(6);
+    expect(await indentOf(done('Sub item'))).toBe(6);
 
     // The Desktop Code tab drops spaces at the start of a Button's content, so none may carry meaning.
     for (const button of await ui.findAll({ type: 'Button' })) {
@@ -176,7 +180,9 @@ for (const surface of SURFACES) {
 
     expect(disk.writes).toEqual([{ path: AUTH_PATH, text: AUTH.replace('- [ ] Write tests', '- [x] Write tests') }]);
     expect((await ui.find({ key: 'g-0' }))?.text).toContain('auth (3/3)');
-    expect((await ui.find({ type: 'Text', text: 'Write tests' }))?.props).toMatchObject({ strikethrough: true });
+    expect((await ui.find({ type: 'Text', text: done('Write tests') }))?.props).toMatchObject({ strikethrough: true });
+    // Outside the terminal the Button is dimmed too, since the dimming on its Text is not drawn there.
+    expect((await ui.find({ type: 'Button', key: 't-0-2' }))?.props.dimColor).toBe(surface === 'terminal' ? undefined : true);
     // The milestone's flag fills once every task beneath it is done.
     expect((await ui.find({ type: 'Text', text: '⚑' }))?.props).toMatchObject({ color: 'success' });
     await ui.unmount();

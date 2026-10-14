@@ -58,6 +58,11 @@ export interface Pressable {
   label: Part;
   after: Part[];
   onPress: () => void;
+  /**
+   * Dim the Button itself, not only its label's Text. Set outside the
+   * terminal, where a Button ignores the styles of the Text inside it.
+   */
+  isButtonDim?: boolean;
 }
 
 /** The slice of a surface's element table the rows are built from. */
@@ -89,7 +94,7 @@ export function drawPressable(el: RowElements, row: Pressable, nesting: { isRefu
   if (!nesting.isRefused) {
     try {
       return (
-        <Button key={row.key} plain onPress={row.onPress}>
+        <Button key={row.key} plain {...(row.isButtonDim ? { dimColor: true } : {})} onPress={row.onPress}>
           {before}
           {text(row.label)}
           {after}
@@ -107,6 +112,15 @@ export function drawPressable(el: RowElements, row: Pressable, nesting: { isRefu
       {after}
     </Box>
   );
+}
+
+/**
+ * Strikes text through with a combining stroke after each character, as the
+ * VS Code extension does for its tree. For surfaces that draw a row's label
+ * as plain text, where a `strikethrough` style has nothing to act on.
+ */
+export function strikeThrough(text: string): string {
+  return [...text].map((character) => `${character}̶`).join('');
 }
 
 /** What the module keeps between events, beside the sync session. */
@@ -364,6 +378,9 @@ export const register: Register = (on, options) => {
     const focusedKey = await read($, focused);
 
     const { settings, template } = session;
+    // The terminal styles the Text inside a Button. The Desktop Code tab draws the Button's content
+    // as plain text, so there a completed task is struck through in its characters and dimmed on the Button.
+    const stylesButtonText = e.surface === 'terminal';
     const rows = buildRows(list, { collapsed: new Set(collapsedIds), hideCompleted: isHiding, template, settings });
     const columns = Math.max(20, e.props.bodyColumns);
     const nesting = mod.nestingBySurface.get(e.surface) ?? { isRefused: false };
@@ -433,6 +450,7 @@ export const register: Register = (on, options) => {
 
       if (row.kind === 'task') {
         const lead = `${row.glyph} `;
+        const label = fit(row.task.cleanText, indent + lead.length + OPEN_WIDTH);
         const press = (): void => void setTaskState($, mod, row.task, getNextState(template, row.task.char).char);
         const rowElement = withOpen(
           (row.isAnimated && isSpinning && drawSpinning(row, indent, press)) ||
@@ -442,11 +460,12 @@ export const register: Register = (on, options) => {
               key: row.key,
               before: [{ text: lead, ...(row.color === undefined ? {} : { color: row.color }) }],
               label: {
-                text: fit(row.task.cleanText, indent + lead.length + OPEN_WIDTH),
+                text: row.isStruck && !stylesButtonText ? strikeThrough(label) : label,
                 ...(row.isStruck ? { strikethrough: true, dimColor: true } : {}),
               },
               after: [],
               onPress: press,
+              isButtonDim: row.isStruck && !stylesButtonText,
             },
             nesting,
           ),
