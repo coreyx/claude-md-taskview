@@ -310,10 +310,10 @@ for (const surface of SURFACES) {
 
       // The picker is closed until asked for, and opening it changes nothing on disk.
       expect(await ui.find({ type: 'Select' })).toBeUndefined();
-      expect((await ui.find({ key: 'p-t-0-1' }))?.props).toMatchObject({ label: '○' });
+      expect((await ui.find({ key: 'p-t-0-1' }))?.props).toMatchObject({ label: '▾' });
       await ui.press({ key: 'p-t-0-1' });
       expect((await ui.find({ key: 's-t-0-1' }))?.props).toMatchObject({ value: '3' });
-      expect((await ui.find({ key: 'p-t-0-1' }))?.props).toMatchObject({ label: '◉' });
+      expect((await ui.find({ key: 'p-t-0-1' }))?.props).toMatchObject({ label: '▴' });
       expect(disk.writes).toHaveLength(1);
 
       // One picker at a time: opening another row's closes this one.

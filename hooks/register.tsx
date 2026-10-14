@@ -401,7 +401,8 @@ export const register: Register = (on, options) => {
             key={`p-${key}`}
             plain
             dimColor
-            label={pickerKey === key ? '◉' : '○'}
+            // A dropdown arrow, pointing up while the picker is open beneath the row.
+            label={pickerKey === key ? '▴' : '▾'}
             onPress={() => update($, picker, (open) => (open === key ? null : key))}
           />
         )}
