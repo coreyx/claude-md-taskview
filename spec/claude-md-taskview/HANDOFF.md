@@ -61,6 +61,15 @@ Every item in [implementation_plan.md](./implementation_plan.md) is checked off,
 - A test must answer the nouns the mod calls. `mock.clock(on)` covers `$.clock`; `$.session.cwd` is answered with `on('session.cwd', () => ({ value: '...' }))` (a hook stub returns a result object, not a bare value).
 - A headless run does not lay `.claude-plugin/types/`. Once an interactive session has loaded the mod, `tsc -p <mod folder>` type-checks it against the laid types.
 
+## Spinner spike (2026-10-13, for [spec/in-progress-spinner](../in-progress-spinner/implementation_plan.md))
+
+A throwaway mod in `scratch/spinner-spike/` (`/spin`): rows of `Text` indent, a one-column `Client` running `hooks/spinner.tsx`, and a plain `Button` label.
+
+- **Test kit, `terminal` and `desktop`:** the `Client` draws, `ui.advance(80)` moves it one frame, a pointer `down` posted from the module arrives as `ui.message`, and the label still presses. The module's tree is read with `ui.find({ type: 'Text', in: '<client key>' })`.
+- **Terminal, owner's report** (dock, 49 columns; the CLI on PATH was 2.1.296): the spinners turn and line up with the static `◐` rows above and below; clicking a glyph raises the message count; Tab stops on the labels and the other Buttons only, never on a spinner; with twenty spinners the pane scrolls and responds normally.
+- **Desktop Code tab:** not yet seen.
+- **A state contract must lead with an export.** `types/index.d.ts` written as `declare module … { }` followed by `export {}` made `claude plugin validate` report some of its keys as undeclared. With an `export type` first it passed.
+
 ## Not yet verified
 - The link press and `code -g` in the Desktop Code tab; section 4 must check them there before it ships.
 - Whether the bare `['code', '-g', 'path:line']` argv opens the file on Windows without `cmd /c`.
@@ -70,6 +79,7 @@ Every item in [implementation_plan.md](./implementation_plan.md) is checked off,
 None blocking; see the plan's Open Questions for the decisions made.
 
 ## Left in place outside the repo
+- `~/.claude/settings.json` has `env.CLAUDE_CODE_PLUGIN_DIRS` pointed at `scratch/spinner-spike` again (2026-10-13), for the Desktop half of the spinner spike. Remove it when that is done. The owner's `stateTemplate` was also set to `Obsidian Tasks` that day, at their request.
 - The owner installed `md-taskview` from the GitHub marketplace on 2026-10-09 (`/plugin install md-taskview --marketplace coreyx/claude-md-taskview`), which worked. `env.CLAUDE_CODE_PLUGIN_DIRS` was then removed from `~/.claude/settings.json`, so the mod loads once, from the install. To develop against the working copy again, use `claude --plugin-dir .`.
 - **The install dialog does not pre-fill a text setting's `default`.** The docs define `default` as the "value used when the user provides nothing", and the fields start empty. The owner typed `/spec/*` and `Milestone` into two of them, and those are what `pluginConfigs` now holds. Both work (a leading slash is ignored), but only "Milestone" marks a milestone there. The descriptions now name each default, released as v0.1.1.
 - **A manifest `version` pins installs to it.** A fix reaches an installed copy only when `version` changes, so anything after v0.1.0 needs a new release to be seen.
