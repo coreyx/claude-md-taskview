@@ -68,7 +68,7 @@
     "milestoneKeywords": {
       "type": "string",
       "title": "Milestone keywords",
-      "description": "Comma-separated keywords that mark a heading as a milestone. Leave empty for the default: Milestone, Release, Alpha, Beta",
+      "description": "Comma-separated keywords that mark a heading as a milestone when the heading starts with one (any case, whole word); a keyword later in the heading does not count. Leave empty for the default: Milestone, Release, Alpha, Beta",
       "default": "Milestone, Release, Alpha, Beta"
     }
   }

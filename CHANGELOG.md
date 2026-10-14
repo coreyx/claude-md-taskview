@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Milestone detection:** a heading is a milestone only when it starts with a milestone keyword. A keyword later in the heading no longer counts, so headings such as `Notes on Milestone 1` or `Pre-release Checklist` stay plain headings. Mirrors the same change in the VS Code extension.
+
 ## [0.3.1] - 2026-10-13
 
 ### Changed
