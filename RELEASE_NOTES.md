@@ -1,5 +1,41 @@
 # Release Notes
 
+## v0.3.0 - 2026-10-13
+
+A clearer way to set a task's state, and fixes for how the pane looks in the Claude Desktop Code tab.
+
+### A control for the state picker
+
+With the Obsidian Tasks template (or any template with more than two states), each task row now ends with a small `○`. Press it to open a picker of every state beneath the task, then pick one: that is how to reach cancelled `[-]`, needs clarification `[?]` and important `[!]`, which pressing the task does not cycle through. Nothing is written until you pick, and pressing `○` again closes the picker.
+
+Before, the picker appeared under whichever task had the keyboard focus. The Desktop Code tab only reported that after the task had been pressed, and pressing a task also moves it to its next state, so reaching the picker meant changing the task first.
+
+Pressing the task itself still moves it on, as before. The Standard (GFM) template has only two states, so it has no picker.
+
+### The Desktop Code tab draws the pane properly again
+
+The desktop app's Claude Code engine has been updated, and it draws the content of a pressable row as plain text. The pane relied on styling there, so in the Code tab:
+
+- **The tree was flat.** Headings and tasks drew at one level instead of indented under their parents. Rows are now indented by layout, not by spaces.
+- **Colours were missing.** The green done glyph, the filled milestone flag and the other state colours drew in the plain text colour. Each row's glyph and count are now drawn beside the pressable label, where colour shows.
+- **Completed tasks looked like any other.** They are now struck through and dimmed. In the Code tab the strike is drawn on each character, as the VS Code extension draws it in its tree, so the line may sit a little low depending on the font.
+
+The terminal was not affected and looks as it did.
+
+### Good to know
+
+- **In the Desktop Code tab, press a task by its label.** Its glyph and a heading's arrow are drawn beside the pressable part there, so clicking them does nothing; an in-progress spinner still takes clicks. In the terminal the whole row is pressable, as before.
+
+### Updating
+
+From a shell:
+
+```bash
+claude plugin update md-taskview@claude-md-taskview
+```
+
+Then start a new session.
+
 ## v0.2.0 - 2026-10-13
 
 In-progress tasks now show a turning spinner, following the same addition in the [VS Code extension's v0.1.13](https://github.com/coreyx/vscode-md-taskview/releases/tag/v0.1.13).

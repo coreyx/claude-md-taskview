@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-13
+
 ### Changed
 - **State picker:** with a multi-state template, each task row now ends with a `○` control that opens the picker of every state beneath the task. It used to appear under whichever task had the keyboard focus, which the Desktop Code tab only reported after the task had been pressed, and a press also changes the task.
 

@@ -31,7 +31,7 @@ Run `/md-tasks` in a folder that holds `spec/<name>/tasks.md` files. The pane op
 
 - Each spec folder is a group, with its headings and tasks nested beneath it and a `(done/total)` count.
 - Press a group or a heading to collapse or expand it.
-- Press a task to move it to its next state. The file on disk changes by exactly one character.
+- Press a task to move it to its next state. The file on disk changes by exactly one character. In the Desktop Code tab, press a task or heading by its label: its glyph is drawn beside the pressable part there, so that colours show.
   - With the **Standard (GFM)** template a press toggles not done `[ ]` and done `[x]`, and nothing else is ever written.
   - With the **Obsidian Tasks** template a press goes not started `[ ]`, in progress `[/]`, done `[x]`, then back to not started.
 - An in-progress task shows a turning spinner, in blue. It is a static `◐` when `animateTaskIcons` is off or Claude Code's `prefersReducedMotion` setting is on. At most twelve spinners turn at once; in-progress tasks past the twelfth show the static `◐`.

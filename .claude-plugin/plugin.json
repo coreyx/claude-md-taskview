@@ -1,6 +1,6 @@
 {
   "name": "md-taskview",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "A pane showing the milestone and task tree of spec/*/tasks.md files; press a task to tick it",
   "author": {
     "name": "Corey Struzan"
