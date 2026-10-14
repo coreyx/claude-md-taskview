@@ -7,9 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-13
+
 ### Added
 - **Animated in-progress spinner:** an in-progress task shows a turning spinner in the pane, in the terminal and the Desktop Code tab. It mirrors the spinner in the VS Code extension's v0.1.13.
 - **`animateTaskIcons` setting:** turns the spinner off (default: on). The spinner is also off when Claude Code's `prefersReducedMotion` setting is on. Either way a static `◐` is shown.
+- **Spinner limits:** at most twelve spinners turn at once, and a surface where a spinner fails goes back to the static `◐`. The Desktop Code tab stops spinners that redraw too often in total.
+- **Pressing the spinner** moves its task on, as pressing the task's label does.
 - **`animatedIcon` state template field:** a custom `*.jsonc` template can give any state an `animatedIcon`, and that state draws with the spinner.
 
 ### Changed

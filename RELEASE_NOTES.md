@@ -1,5 +1,48 @@
 # Release Notes
 
+## v0.2.0 - 2026-10-13
+
+In-progress tasks now show a turning spinner, following the same addition in the [VS Code extension's v0.1.13](https://github.com/coreyx/vscode-md-taskview/releases/tag/v0.1.13).
+
+### A spinner for tasks in progress
+
+A task marked in progress (`[/]`) shows a small blue spinner turning where its static `◐` used to be, in the terminal and in the Claude Desktop Code tab. You can press the spinner or the task's label to move the task on.
+
+In-progress tasks are now blue rather than yellow.
+
+### You need the Obsidian Tasks template to see it
+
+The spinner belongs to the in-progress state, and only the **Obsidian Tasks** template has one. With it, pressing a task goes not started `[ ]`, in progress `[/]`, done `[x]`, then back to not started.
+
+The default **Standard (GFM)** template is unchanged and stays pure GitHub checkboxes: a press toggles `[ ]` and `[x]` and nothing else is ever written.
+
+To switch, run `/config` and set the mod's "State template" to `Obsidian Tasks`. The [README](./README.md#settings) also shows how to set it in `~/.claude/settings.json`.
+
+A custom template can give any state an `animatedIcon` to draw it with the spinner.
+
+### Turning the motion off
+
+- Set **Animate task icons** (`animateTaskIcons`) off in `/config`.
+- Or turn on Claude Code's own `prefersReducedMotion` setting, which the mod respects.
+
+Either way the static `◐` is shown.
+
+### Good to know
+
+- **At most twelve spinners turn at once.** In-progress tasks past the twelfth show the static `◐`. The Desktop Code tab stops spinners when too many redraw together, and this keeps the pane within what it allows.
+- **The spinner needs the terminal or the Desktop Code tab.** Other surfaces show the static `◐`.
+- The extension's new editor task actions (Start, Continue, Mark done) are not part of the mod. They are CodeLens in a text editor, which a pane does not have; pressing a task does the same job.
+
+### Updating
+
+From a shell:
+
+```bash
+claude plugin update md-taskview@claude-md-taskview
+```
+
+Then start a new session.
+
 ## v0.1.1 - 2026-10-09
 
 A small follow-up to the first release that makes the settings easier to fill in. Nothing about the pane itself changes.
