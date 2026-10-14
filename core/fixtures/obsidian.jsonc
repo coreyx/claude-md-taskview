@@ -18,6 +18,7 @@
       "id": "in_progress",
       "label": "In Progress",
       "icon": "sync",
+      "animatedIcon": "loading~spin",
       "color": "charts.yellow",
       "strikethrough": false,
       "countsAsCompleted": false,

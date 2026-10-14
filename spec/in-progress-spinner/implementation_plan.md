@@ -44,7 +44,7 @@ None blocking. The spike (section 0) decides one thing: whether the spinner is a
 - [x] Give that state `color: 'charts.blue'` in place of upstream's `charts.yellow`, so in-progress tasks and their spinner draw blue (the `suggestion` theme key). Added at the owner's request on 2026-10-13, after approval; it is a deliberate difference from the extension, to be recorded in `UPSTREAM.md`.
 
 #### [MODIFY] `core/fixtures/obsidian.jsonc`
-- [ ] Re-copy from the extension's `resources/templates/obsidian.jsonc`, which gained the same field.
+- [x] Re-copy from the extension's `resources/templates/obsidian.jsonc`, which gained the same field.
 
 #### [MODIFY] `core/core.spec.ts`
 - [ ] Assert the Obsidian in-progress state carries `animatedIcon`, that no Standard state does, and that `validateTemplate` keeps the field on a custom template. The fixture comparison covers the re-copied file, now setting aside the in-progress colour as well as the description.
