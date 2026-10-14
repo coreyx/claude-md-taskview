@@ -70,13 +70,13 @@ None blocking. The spike (section 0) decides one thing: whether the spinner is a
 - [x] On a pointer `down`, `post` a press, if the spike found that reliable. (Kept: the spike showed a click on the glyph arriving in the terminal.)
 
 #### [MODIFY] `hooks/register.tsx`
-- [ ] Add a top-level `isMotionAllowed($, mod)`: true when `animateTaskIcons` is on and `$.settings.read()` does not have `prefersReducedMotion: true`. A failed read counts as motion allowed.
-- [ ] In the render hook, draw a task row whose `isAnimated` is set, when motion is allowed and the surface's table has `Client`, as: `Text` indent, `Client` keyed `a-<row key>` with `module: './spinner.tsx'` and a width of one column, a space, a plain `Button` under the row's key holding the label, then the `↗` control. If making the `Client` throws, fall back to the static row and remember that for the surface, as the rich-row fallback does.
-- [ ] Otherwise draw the row as now, with the static glyph.
-- [ ] If the spike found glyph presses reliable: an `on('ui.message', …)` hook for the pane that maps a spinner's key back to its task and moves it to its next state, as pressing the label does.
+- [x] Add a top-level `isMotionAllowed($, mod)`: true when `animateTaskIcons` is on and `$.settings.read()` does not have `prefersReducedMotion: true`. A failed read counts as motion allowed.
+- [x] In the render hook, draw a task row whose `isAnimated` is set, when motion is allowed and the surface's table has `Client`, as: `Text` indent, `Client` keyed `a-<row key>` with `module: './spinner.tsx'` and a width of one column, a space, a plain `Button` under the row's key holding the label, then the `↗` control. If making the `Client` throws, fall back to the static row and remember that for the surface, as the rich-row fallback does. (The surface is asked by name, `terminal` or `desktop`, not by whether its table has `Client`: a table is completed with the elements its surface lacks, and those draw nothing.)
+- [x] Otherwise draw the row as now, with the static glyph.
+- [x] If the spike found glyph presses reliable: an `on('ui.message', …)` hook for the pane that maps a spinner's key back to its task and moves it to its next state, as pressing the label does. (Kept. The hook finds the task with `findTask` in `hooks/rows.ts`.)
 
 #### [MODIFY] `hooks/register.test.ts`
-- [ ] Cover the cases under Automated Tests below, and answer `settings.read` in the test world.
+- [x] Cover the cases under Automated Tests below, and answer `settings.read` in the test world.
 
 ### 3. Documentation
 

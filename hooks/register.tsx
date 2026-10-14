@@ -5,8 +5,8 @@ import { replaceStateChar } from '../core/mutate';
 import { getNextState } from '../core/templates';
 import type { SpecGroup, TaskNode } from '../core/types';
 import type { SpecGroup as ContractSpecGroup } from '../types';
-import { buildRows, collapsibleIds } from './rows';
-import type { Row } from './rows';
+import { buildRows, collapsibleIds, findTask } from './rows';
+import type { Row, TaskRow } from './rows';
 import { readSettings } from './settings';
 import { createSession, loadTemplate, poll, refresh } from './sync';
 import type { Host, Session } from './sync';
@@ -107,6 +107,8 @@ interface Mod {
   viewKey: string;
   /** Per surface, whether the build refused Text inside a Button. */
   nestingBySurface: Map<string, { isRefused: boolean }>;
+  /** Surfaces whose build threw on the spinner's `Client`; they get the static glyph from then on. */
+  spinnerRefused: Set<string>;
 }
 
 // Claude Code follows `$` only into functions declared at the top of this
@@ -127,6 +129,19 @@ function hostOf($: EngineInterface): Host {
     setError: (message) => update($, error, () => message),
     toast: (text) => $.ui.toast(text),
   };
+}
+
+/**
+ * Whether the in-progress spinner may turn: the mod's own setting is on and
+ * Claude Code's `prefersReducedMotion` is not. The counterpart of the
+ * extension's check of VS Code's `accessibility.reducedMotion`.
+ */
+async function isMotionAllowed($: EngineInterface, mod: Mod): Promise<boolean> {
+  if (!mod.session.settings.animateTaskIcons) return false;
+
+  // A settings read that fails says nothing about motion, so the spinner stays.
+  const settings = await $.settings.read().catch(() => undefined);
+  return settings?.prefersReducedMotion !== true;
 }
 
 /** Loads what a folder's pane was left showing: its collapsed rows and the completed filter. */
@@ -241,6 +256,7 @@ export const register: Register = (on, options) => {
     hasCommand: false,
     viewKey: 'view',
     nestingBySurface: new Map(),
+    spinnerRefused: new Set(),
   };
   const { session } = mod;
 
@@ -299,10 +315,27 @@ export const register: Register = (on, options) => {
     return moved;
   });
 
+  // A spinner sits beside its row's Button, not inside it, so a click on the glyph arrives here instead.
+  on('ui.message', { requestId: PANE }, async ($, e, next) => {
+    const heard = await next(e);
+    const isPress = typeof e.data === 'object' && e.data !== null && (e.data as { press?: unknown }).press === true;
+    const task = isPress ? findTask(await read($, groups).catch(() => []), e.element) : undefined;
+    if (task) {
+      await setTaskState($, mod, task, getNextState(session.template, task.char).char);
+    }
+
+    return heard;
+  });
+
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const el = $.ui.resolve(e);
     const { Box, Button, Text } = el;
     const Select = 'Select' in el ? el.Select : undefined;
+    // Asked by surface, not by `'Client' in el`: a table is completed with the elements its surface
+    // lacks, and those draw nothing, so a spinner would vanish there instead of falling back.
+    const hasClient = e.surface === 'terminal' || e.surface === 'desktop';
+    const Client = hasClient && 'Client' in el && !mod.spinnerRefused.has(e.surface) ? el.Client : undefined;
+    const isSpinning = Client !== undefined && (await isMotionAllowed($, mod));
 
     const list = await read($, groups);
     const collapsedIds = await read($, collapsed);
@@ -331,12 +364,50 @@ export const register: Register = (on, options) => {
       </Box>
     );
 
+    /**
+     * Draws a task row with the spinner for its glyph. A `Client` cannot sit
+     * inside a Button, so the row is the spinner and then the label as the
+     * Button; the spinner posts its own clicks (see the `ui.message` hook).
+     *
+     * @returns The row, or undefined when this build threw on the `Client`, which is then not tried again here.
+     */
+    const drawSpinning = (row: TaskRow, indent: string, onPress: () => void): RenderElement | undefined => {
+      if (Client === undefined) return undefined;
+
+      try {
+        return (
+          <Box>
+            <Text>{indent}</Text>
+            <Client
+              key={`a-${row.key}`}
+              module="./spinner.tsx"
+              props={row.color === undefined ? {} : { color: row.color }}
+              width={1}
+            />
+            <Text> </Text>
+            <Button
+              key={row.key}
+              plain
+              dimColor={row.isStruck}
+              label={fit(row.task.cleanText, indent.length + 2 + OPEN_WIDTH)}
+              onPress={onPress}
+            />
+          </Box>
+        );
+      } catch {
+        mod.spinnerRefused.add(e.surface);
+        return undefined;
+      }
+    };
+
     const drawRow = (row: Row): RenderElement | RenderElement[] => {
       const indent = INDENT.repeat(row.depth);
 
       if (row.kind === 'task') {
         const lead = `${indent}${row.glyph} `;
+        const press = (): void => void setTaskState($, mod, row.task, getNextState(template, row.task.char).char);
         const rowElement = withOpen(
+          (row.isAnimated && isSpinning && drawSpinning(row, indent, press)) ||
           drawPressable(
             el,
             {
@@ -347,7 +418,7 @@ export const register: Register = (on, options) => {
                 ...(row.isStruck ? { strikethrough: true, dimColor: true } : {}),
               },
               after: [],
-              onPress: () => void setTaskState($, mod, row.task, getNextState(template, row.task.char).char),
+              onPress: press,
             },
             nesting,
           ),

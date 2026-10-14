@@ -43,6 +43,8 @@ function world(on: On, files: Record<string, string>, takenCommands: string[] = 
     commands: [] as string[],
     opened: [] as string[],
     store: {} as Record<string, unknown>,
+    /** Claude Code's own settings, as `$.settings.read()` answers them. */
+    settings: {} as Record<string, unknown>,
     clock: mock.clock(on, { now: 5000 }),
     /** Changes a file as another editor would: new text, newer modification time. */
     edit(path: string, text: string) {
@@ -113,6 +115,7 @@ function world(on: On, files: Record<string, string>, takenCommands: string[] = 
     state.toasts.push(e.text);
     return { value: undefined };
   });
+  on('settings.read', () => ({ value: state.settings }));
   on('ui.log', () => ({ value: undefined }));
   on('ui.focus', () => ({}));
   on('session.start', (_$, e) => ({ cwd: e.cwd }));
@@ -247,8 +250,8 @@ for (const surface of SURFACES) {
       const disk = world(on, { [AUTH_PATH]: '- [/] Draft the plan\n- [-] Dropped idea\n' });
       const ui = await start($);
 
-      // Pressing cycles through the template: in progress -> done.
-      expect((await ui.find({ key: 't-0-0' }))?.text).toContain('◐');
+      // Pressing cycles through the template: in progress -> done. The in-progress row carries a spinner.
+      expect(await ui.find({ type: 'Client', key: 'a-t-0-0' })).toBeDefined();
       await ui.press({ key: 't-0-0' });
       expect(disk.files[AUTH_PATH]).toBe('- [x] Draft the plan\n- [-] Dropped idea\n');
 
@@ -352,6 +355,122 @@ test('opening falls back to "cmd /c code", but never for a path cmd could misrea
   expect(ran).toEqual([['code', '-g', `${risky}:1`]]);
   expect(disk.toasts.length).toBe(1);
   expect(disk.toasts[0]).toContain(`could not open ${risky}:1`);
+  await ui.unmount();
+});
+
+const CYCLE = '- [ ] Draft the plan\n- [/] Build it\n- [x] Ship it\n';
+const OBSIDIAN = { options: { stateTemplate: 'Obsidian Tasks' } };
+
+for (const surface of SURFACES) {
+  const open = async ($: Engine) => {
+    await $.session.start({ cwd: CWD, surface, isInteractive: true });
+    return $.ui.mount({ plugin: 'md-taskview', surface, component: 'Pane', requestId: 'md-tasks', props: PANE });
+  };
+
+  test(`${surface}: an in-progress task draws a spinner that turns, beside a pressable label`, OBSIDIAN, async ($, on) => {
+    world(on, { [AUTH_PATH]: CYCLE });
+    const ui = await open($);
+
+    const spinners = await ui.findAll({ type: 'Client' });
+    expect(spinners.map((spinner) => spinner.key)).toEqual(['a-t-0-1']);
+    // The engine rewrites `module` to the file's path under the plugin, so only its name is checked.
+    expect(String(spinners[0]?.props.module)).toContain('spinner.tsx');
+    expect(spinners[0]?.props).toMatchObject({ props: { color: 'suggestion' }, width: 1 });
+    expect((await ui.find({ type: 'Button', key: 't-0-1' }))?.props).toMatchObject({ label: 'Build it' });
+
+    expect((await ui.find({ type: 'Text', in: 'a-t-0-1' }))?.text).toBe('⠋');
+    await ui.advance(80);
+    expect((await ui.find({ type: 'Text', in: 'a-t-0-1' }))?.text).toBe('⠙');
+    expect((await ui.find({ type: 'Text', in: 'a-t-0-1' }))?.props).toMatchObject({ color: 'suggestion' });
+    await ui.unmount();
+  });
+
+  test(`${surface}: the spinner gives way to the static glyph when animation is off`, async ($, on) => {
+    world(on, { [AUTH_PATH]: CYCLE });
+    const ui = await open($);
+
+    // The Standard template has no in-progress state, so `[/]` is neither animated nor in progress there.
+    expect(await ui.findAll({ type: 'Client' })).toEqual([]);
+    await ui.unmount();
+  });
+
+  test(
+    `${surface}: animateTaskIcons off draws the static in-progress glyph`,
+    { options: { stateTemplate: 'Obsidian Tasks', animateTaskIcons: false } },
+    async ($, on) => {
+      world(on, { [AUTH_PATH]: CYCLE });
+      const ui = await open($);
+
+      expect(await ui.findAll({ type: 'Client' })).toEqual([]);
+      expect((await ui.find({ key: 't-0-1' }))?.text).toContain('◐');
+      await ui.unmount();
+    },
+  );
+
+  test(`${surface}: prefersReducedMotion draws the static in-progress glyph`, OBSIDIAN, async ($, on) => {
+    const disk = world(on, { [AUTH_PATH]: CYCLE });
+    disk.settings.prefersReducedMotion = true;
+    const ui = await open($);
+
+    expect(await ui.findAll({ type: 'Client' })).toEqual([]);
+    expect((await ui.find({ key: 't-0-1' }))?.text).toContain('◐');
+    await ui.unmount();
+  });
+
+  test(`${surface}: Obsidian Tasks cycles not started, in progress, done`, OBSIDIAN, async ($, on) => {
+    const disk = world(on, { [AUTH_PATH]: '- [ ] Draft the plan\n' });
+    const ui = await open($);
+
+    await ui.press({ key: 't-0-0' });
+    expect(disk.files[AUTH_PATH]).toBe('- [/] Draft the plan\n');
+    expect((await ui.findAll({ type: 'Client' })).map((spinner) => spinner.key)).toEqual(['a-t-0-0']);
+
+    // The second press lands on the spinner row's label, which is the row's Button now.
+    await ui.press({ key: 't-0-0' });
+    expect(disk.files[AUTH_PATH]).toBe('- [x] Draft the plan\n');
+    expect(await ui.findAll({ type: 'Client' })).toEqual([]);
+
+    await ui.press({ key: 't-0-0' });
+    expect(disk.files[AUTH_PATH]).toBe('- [ ] Draft the plan\n');
+    await ui.unmount();
+  });
+
+  test(`${surface}: Standard (GFM) stays done and not done, and never writes [/]`, async ($, on) => {
+    const disk = world(on, { [AUTH_PATH]: '- [ ] Draft the plan\n' });
+    const ui = await open($);
+
+    await ui.press({ key: 't-0-0' });
+    expect(disk.files[AUTH_PATH]).toBe('- [x] Draft the plan\n');
+    await ui.press({ key: 't-0-0' });
+    expect(disk.files[AUTH_PATH]).toBe('- [ ] Draft the plan\n');
+    expect(disk.writes.some((write) => write.text.includes('[/]'))).toBe(false);
+    await ui.unmount();
+  });
+
+  test(`${surface}: a click on the spinner itself moves the task on`, OBSIDIAN, async ($, on) => {
+    const disk = world(on, { [AUTH_PATH]: CYCLE });
+    const ui = await open($);
+
+    await ui.pointer({ type: 'down', x: 0, y: 0, button: 'left', in: 'a-t-0-1' });
+
+    expect(disk.files[AUTH_PATH]).toBe('- [ ] Draft the plan\n- [x] Build it\n- [x] Ship it\n');
+    await ui.unmount();
+  });
+}
+
+test('a surface with no Client element draws the static in-progress glyph', OBSIDIAN, async ($, on) => {
+  world(on, { [AUTH_PATH]: CYCLE });
+  await $.session.start({ cwd: CWD, surface: 'vscode', isInteractive: true });
+  const ui = await $.ui.mount({
+    plugin: 'md-taskview',
+    surface: 'vscode',
+    component: 'Pane',
+    requestId: 'md-tasks',
+    props: PANE,
+  });
+
+  expect(await ui.findAll({ type: 'Client' })).toEqual([]);
+  expect((await ui.find({ key: 't-0-1' }))?.text).toContain('◐');
   await ui.unmount();
 });
 
