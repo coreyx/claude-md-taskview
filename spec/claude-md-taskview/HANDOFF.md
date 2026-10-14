@@ -90,7 +90,7 @@ None blocking; see the plan's Open Questions for the decisions made.
 - **A manifest `version` pins installs to it.** A fix reaches an installed copy only when `version` changes, so anything after v0.1.0 needs a new release to be seen.
 
 ## Next steps for the spinner (spec/in-progress-spinner)
-Every item in its plan is checked off and its [walkthrough](../in-progress-spinner/walkthrough.md) is written (2026-10-13). Released as v0.2.0 on 2026-10-13 on the owner's word, before the walkthrough's manual steps were run on the real pane: the owner chose to check the released build. The owner then ran the seven checks in `scratch/pane-test/README.md` on it and all passed (surface not stated). Still open from the walkthrough: `prefersReducedMotion`, the state picker in the Desktop Code tab, and CPU use over time.
+Every item in its plan is checked off and its [walkthrough](../in-progress-spinner/walkthrough.md) is written (2026-10-13). Released as v0.2.0 on 2026-10-13 on the owner's word, before the walkthrough's manual steps were run on the real pane: the owner chose to check the released build. The owner then ran the seven checks in `scratch/pane-test/README.md` on it in the terminal and all passed. Still open from the walkthrough: the Desktop Code tab on the real pane (the twelve-spinner limit and the state picker above all), `prefersReducedMotion`, and CPU use over time.
 
 ## Next steps (first release, done)
 1. Done on 2026-10-09: the command is `/md-tasks` only, by the owner's decision. Worth one live run to see it open the pane; the manual checks used the earlier `/tasks`.

@@ -2,7 +2,7 @@
 
 An in-progress task now shows a turning blue spinner in the task pane, mirroring the spinner the VS Code extension gained in v0.1.13. A setting and Claude Code's reduced-motion setting turn it off. The Standard (GFM) template is unchanged: a press there is still only done and not done.
 
-Everything automated passes, and the owner has checked the released v0.2.0 by hand: all seven checks in the test folder passed. Three of the steps below were not part of that list and remain open.
+Everything automated passes, and the owner has checked the released v0.2.0 by hand in the terminal: all seven checks in the test folder passed. The Desktop Code tab has not been checked on the real pane yet, and three of the steps below were not part of that list.
 
 ## What Was Implemented
 
@@ -67,9 +67,9 @@ Also `claude plugin validate .` reports no refusals, and `npm run typecheck` pas
 The 26 mod tests and 25 core tests from v0.1.1 still pass, with one updated: the state-picker test used to find `◐` in an in-progress row and now finds the spinner there. The extension repo was only read; its `git status` is clean.
 
 ## Manual Verification
-**Done on the released v0.2.0, 2026-10-13.** The owner ran the seven checks in `scratch/pane-test/README.md` (a throwaway folder with one task file showing every state and another with fourteen tasks in progress) and reported every one as passing. Those cover steps 1, 2, 3, 4, 6 and the twelve-spinner limit of step 7 below. Which surface they were run on was not said.
+**Done on the released v0.2.0, 2026-10-13.** The owner ran the seven checks in `scratch/pane-test/README.md` (a throwaway folder with one task file showing every state and another with fourteen tasks in progress) and reported every one as passing. Those cover steps 1, 2, 3, 4, 6 and the twelve-spinner limit of step 7 below. They were run in the terminal only.
 
-**Not yet run:** step 5 (`prefersReducedMotion`), step 8 (the state picker in the Desktop Code tab), step 9 (CPU use over a few minutes), and, if the seven were run in the terminal, step 7 in the Desktop Code tab, which is the one place the limit matters.
+**Not yet run:** anything in the Desktop Code tab, where step 7 (the twelve-spinner limit) and step 8 (the state picker) matter most; step 5 (`prefersReducedMotion`); and step 9 (CPU use over a few minutes).
 
 1. With `stateTemplate` set to `Obsidian Tasks`, run `/md-tasks` in a folder with task files: a `[/]` task shows a blue spinner turning, in the terminal and in the Desktop Code tab.
 2. Press a not-started task: it becomes in progress and starts spinning. Press it again: done. Again: not started. `git diff` shows one character changed each time.
