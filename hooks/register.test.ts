@@ -297,49 +297,51 @@ for (const surface of SURFACES) {
   });
 
   test(
-    `${surface}: a multi-state template offers a state picker on the focused task`,
+    `${surface}: a control at the end of a task row opens a picker of every state`,
     { options: { stateTemplate: 'Obsidian Tasks' } },
     async ($, on) => {
       const disk = world(on, { [AUTH_PATH]: '- [/] Draft the plan\n- [-] Dropped idea\n' });
       const ui = await start($);
 
-      // Pressing cycles through the template: in progress -> done. The in-progress row carries a spinner.
+      // Pressing the row still cycles through the template: in progress -> done.
       expect(await ui.find({ type: 'Client', key: 'a-t-0-0' })).toBeDefined();
       await ui.press({ key: 't-0-0' });
       expect(disk.files[AUTH_PATH]).toBe('- [x] Draft the plan\n- [-] Dropped idea\n');
 
-      // No picker until a task holds the focus.
+      // The picker is closed until asked for, and opening it changes nothing on disk.
       expect(await ui.find({ type: 'Select' })).toBeUndefined();
-      await $.ui.focus({
-        component: 'Pane',
-        requestId: 'md-tasks',
-        plugin: 'md-taskview',
-        element: 't-0-1',
-        origin: { kind: 'person' },
-      });
+      expect((await ui.find({ key: 'p-t-0-1' }))?.props).toMatchObject({ label: '○' });
+      await ui.press({ key: 'p-t-0-1' });
       expect((await ui.find({ key: 's-t-0-1' }))?.props).toMatchObject({ value: '3' });
+      expect((await ui.find({ key: 'p-t-0-1' }))?.props).toMatchObject({ label: '◉' });
+      expect(disk.writes).toHaveLength(1);
 
+      // One picker at a time: opening another row's closes this one.
+      await ui.press({ key: 'p-t-0-0' });
+      expect((await ui.findAll({ type: 'Select' })).map((select) => select.key)).toEqual(['s-t-0-0']);
+      await ui.press({ key: 'p-t-0-1' });
+
+      // A pick writes the state and closes the picker.
       await ui.select({ key: 's-t-0-1', value: '5' });
       expect(disk.files[AUTH_PATH]).toBe('- [x] Draft the plan\n- [!] Dropped idea\n');
+      expect(await ui.find({ type: 'Select' })).toBeUndefined();
+
+      // Pressing the control again closes it without a pick.
+      await ui.press({ key: 'p-t-0-0' });
+      await ui.press({ key: 'p-t-0-0' });
+      expect(await ui.find({ type: 'Select' })).toBeUndefined();
+      expect(disk.writes).toHaveLength(2);
       await ui.unmount();
     },
   );
 
-  test(`${surface}: a two-state template shows no picker, even on the focused task`, async ($, on) => {
+  test(`${surface}: a two-state template has no picker control`, async ($, on) => {
     world(on, { [AUTH_PATH]: AUTH });
     const ui = await start($);
 
-    await $.ui.focus({
-      component: 'Pane',
-      requestId: 'md-tasks',
-      plugin: 'md-taskview',
-      element: 't-0-2',
-      origin: { kind: 'person' },
-    });
-    expect(await ui.find({ type: 'Select' })).toBeUndefined();
-    // Jump-to-source is the only control at the end of a row.
-    expect(await ui.find({ key: 'o-t-0-2' })).toBeDefined();
     expect((await ui.findAll({ type: 'Button' })).filter((button) => button.key?.startsWith('p-'))).toEqual([]);
+    // Jump-to-source is still there.
+    expect(await ui.find({ key: 'o-t-0-1' })).toBeDefined();
     await ui.unmount();
   });
 }

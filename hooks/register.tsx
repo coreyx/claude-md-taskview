@@ -31,8 +31,8 @@ const OPEN_TIMEOUT_MS = 15000;
  * too many redraw at once (see FRAME_MS in spinner.tsx).
  */
 const MAX_SPINNERS = 12;
-/** Columns the open control takes at the end of a row: a space and the arrow. */
-const OPEN_WIDTH = 2;
+/** Columns a control takes at the end of a row: a space and its glyph. */
+const CONTROL_WIDTH = 2;
 // `cmd /c` re-reads its arguments as a command line, so a path holding one of these could run something else.
 const CMD_UNSAFE = /[&|<>^%!"]/;
 
@@ -40,7 +40,7 @@ const groups = atom({ plugin: 'md-taskview', key: 'groups' } as const, []);
 const collapsed = atom({ plugin: 'md-taskview', key: 'collapsed' } as const, []);
 const hideCompleted = atom({ plugin: 'md-taskview', key: 'hideCompleted' } as const, false);
 const error = atom({ plugin: 'md-taskview', key: 'error' } as const, null);
-const focused = atom({ plugin: 'md-taskview', key: 'focused' } as const, null);
+const picker = atom({ plugin: 'md-taskview', key: 'picker' } as const, null);
 
 /** One styled run of text in a row. */
 interface Part {
@@ -321,23 +321,6 @@ export const register: Register = (on, options) => {
     return ran;
   });
 
-  // The state picker follows the focus ring, which only this event reports. The Desktop Code tab
-  // reports it when a task is pressed, not when Tab reaches it, so there the picker appears after a press.
-  on('ui.focus', { requestId: PANE }, async ($, e, next) => {
-    const moved = await next(e);
-    const key = e.element;
-    const isPicker = key !== undefined && key.startsWith('s-');
-    if (session.template.states.length > 2 && !isPicker) {
-      const taskKey = key !== undefined && key.startsWith('t-') ? key : null;
-      const held = await read($, focused).catch(() => taskKey);
-      if (held !== taskKey) {
-        await update($, focused, () => taskKey).catch(() => undefined);
-      }
-    }
-
-    return moved;
-  });
-
   // A spinner sits beside its row's Button, not inside it, so a click on the glyph arrives here instead.
   on('ui.message', { requestId: PANE }, async ($, e, next) => {
     const heard = await next(e);
@@ -374,7 +357,7 @@ export const register: Register = (on, options) => {
     const collapsedIds = await read($, collapsed);
     const isHiding = await read($, hideCompleted);
     const failure = await read($, error);
-    const focusedKey = await read($, focused);
+    const pickerKey = await read($, picker);
 
     const { settings, template } = session;
     // The terminal styles the Text inside a Button. The Desktop Code tab draws a Button's content as
@@ -393,18 +376,41 @@ export const register: Register = (on, options) => {
       return label.length > room ? `${label.slice(0, room - 1)}…` : label;
     };
 
-    // A multi-state template shows a picker of every state beneath the focused task, in place of the
-    // extension's right-click "Set Task State" menu. Two states need no picker.
+    // A multi-state template gets a control on each task row that opens a picker of every state,
+    // in place of the extension's right-click "Set Task State" menu. Two states need no picker.
     const hasPicker = Select !== undefined && template.states.length > 2;
 
-    /** Indents a row and adds the jump-to-source control after it; pressing the row itself still toggles it. */
-    const withOpen = (rowElement: RenderElement, key: string, filePath: string, line: number, indent: number): RenderElement => (
+    /**
+     * Indents a row and adds its controls after it: on a task row of a
+     * multi-state template the state picker's, then jump-to-source. Pressing
+     * the row itself still toggles it.
+     */
+    const withControls = (
+      rowElement: RenderElement,
+      key: string,
+      filePath: string,
+      line: number,
+      indent: number,
+      isTask: boolean,
+    ): RenderElement => (
       <Box key={`r-${key}`} paddingLeft={indent}>
         {rowElement}
+        {isTask && hasPicker && <Text> </Text>}
+        {isTask && hasPicker && (
+          <Button
+            key={`p-${key}`}
+            plain
+            dimColor
+            label={pickerKey === key ? '◉' : '○'}
+            onPress={() => update($, picker, (open) => (open === key ? null : key))}
+          />
+        )}
         <Text> </Text>
         <Button key={`o-${key}`} plain dimColor label="↗" onPress={() => void openSource($, filePath, line)} />
       </Box>
     );
+    /** Columns the controls at the end of a row take, which its label must leave free. */
+    const controlsWidth = (isTask: boolean): number => (isTask && hasPicker ? 2 : 1) * CONTROL_WIDTH;
 
     let spinnersDrawn = 0;
 
@@ -433,7 +439,7 @@ export const register: Register = (on, options) => {
               key={row.key}
               plain
               dimColor={row.isStruck}
-              label={fit(row.task.cleanText, indent + 2 + OPEN_WIDTH)}
+              label={fit(row.task.cleanText, indent + 2 + controlsWidth(true))}
               onPress={onPress}
             />
           </Box>
@@ -449,9 +455,9 @@ export const register: Register = (on, options) => {
 
       if (row.kind === 'task') {
         const lead = `${row.glyph} `;
-        const label = fit(row.task.cleanText, indent + lead.length + OPEN_WIDTH);
+        const label = fit(row.task.cleanText, indent + lead.length + controlsWidth(true));
         const press = (): void => void setTaskState($, mod, row.task, getNextState(template, row.task.char).char);
-        const rowElement = withOpen(
+        const rowElement = withControls(
           (row.isAnimated && isSpinning && drawSpinning(row, indent, press)) ||
           drawPressable(
             el,
@@ -471,8 +477,9 @@ export const register: Register = (on, options) => {
           row.task.filePath,
           row.task.line,
           indent,
+          true,
         );
-        if (Select === undefined || !hasPicker || row.key !== focusedKey) return rowElement;
+        if (Select === undefined || !hasPicker || row.key !== pickerKey) return rowElement;
 
         return [
           rowElement,
@@ -487,6 +494,8 @@ export const register: Register = (on, options) => {
               value={String(template.states.indexOf(row.state))}
               onSelect={async (value) => {
                 const picked = template.states[Number(value)];
+                // The picker closes on a pick, whether or not the state changed.
+                await update($, picker, () => null);
                 if (picked && picked.char !== row.task.char) await setTaskState($, mod, row.task, picked.char);
               }}
             />
@@ -497,7 +506,7 @@ export const register: Register = (on, options) => {
       const chevron = row.isCollapsed ? '▸ ' : '▾ ';
       const flag = row.kind === 'heading' && row.isMilestone ? (row.isComplete ? '⚑ ' : '⚐ ') : '';
       const count = row.count === '' ? '' : ` ${row.count}`;
-      const used = indent + chevron.length + flag.length + count.length + OPEN_WIDTH;
+      const used = indent + chevron.length + flag.length + count.length + controlsWidth(false);
 
       const rowElement = drawPressable(
         el,
@@ -518,7 +527,7 @@ export const register: Register = (on, options) => {
       );
 
       // A group is the outermost level, so it has no indent to carry.
-      if (row.kind === 'heading') return withOpen(rowElement, row.key, row.filePath, row.line, indent);
+      if (row.kind === 'heading') return withControls(rowElement, row.key, row.filePath, row.line, indent, false);
       // Every row sits in a Box keyed after it, so the whole row can be found as one, whichever form it took.
       return <Box key={`r-${row.key}`}>{rowElement}</Box>;
     };
