@@ -261,6 +261,28 @@ describe('state templates', () => {
     expect(getNextState(STANDARD_TEMPLATE, '>').char).toBe(' ');
   });
 
+  it('should mark only the Obsidian in-progress state as animated, and draw it blue', () => {
+    const inProgress = getState(OBSIDIAN_TEMPLATE, '/');
+    expect(inProgress.animatedIcon).toBe('loading~spin');
+    expect(inProgress.color).toBe('charts.blue');
+
+    const animated = OBSIDIAN_TEMPLATE.states.filter((state) => state.animatedIcon !== undefined);
+    expect(animated.map((state) => state.id)).toEqual(['in_progress']);
+    expect(STANDARD_TEMPLATE.states.some((state) => state.animatedIcon !== undefined)).toBe(false);
+
+    // Standard stays pure GFM: `[/]` is no state of it, so it is neither in progress nor animated there.
+    expect(getState(STANDARD_TEMPLATE, '/').id).toBe('unknown');
+    expect(getState(STANDARD_TEMPLATE, '/').animatedIcon).toBeUndefined();
+    expect(getNextState(STANDARD_TEMPLATE, ' ').char).toBe('x');
+  });
+
+  it('should keep animatedIcon on a custom template', () => {
+    const custom = validateTemplate({
+      states: [{ char: '/', id: 'progress', label: 'In Progress', icon: 'sync', animatedIcon: 'loading~spin' }],
+    });
+    expect(custom?.states[0]?.animatedIcon).toBe('loading~spin');
+  });
+
   it('should reject templates a toggle could not write', () => {
     expect(validateTemplate(null)).toBeNull();
     expect(validateTemplate({ name: 'No states' })).toBeNull();
@@ -275,11 +297,21 @@ describe('state templates', () => {
 
 describe('parseJsonc', () => {
   it("should read the extension's obsidian.jsonc as the built-in Obsidian template", () => {
-    const template = validateTemplate(parseJsonc(obsidianJsonc));
+    const template = validateTemplate(parseJsonc(obsidianJsonc))!;
+    const inProgress = template.states.find((state) => state.id === 'in_progress')!;
 
-    // The file and the constant are worded differently upstream; everything that drives behaviour matches.
-    expect(template?.description).toBe('Supports Obsidian Tasks multi-state checklist conventions');
-    expect({ ...template, description: OBSIDIAN_TEMPLATE.description }).toEqual(OBSIDIAN_TEMPLATE);
+    // Two things differ on purpose. The file and the constant are worded differently upstream, and
+    // this mod draws in-progress blue where the extension's file says yellow.
+    expect(template.description).toBe('Supports Obsidian Tasks multi-state checklist conventions');
+    expect(inProgress.color).toBe('charts.yellow');
+    expect(inProgress.animatedIcon).toBe('loading~spin');
+
+    const aligned = {
+      ...template,
+      description: OBSIDIAN_TEMPLATE.description,
+      states: template.states.map((state) => (state === inProgress ? { ...state, color: 'charts.blue' } : state)),
+    };
+    expect(aligned).toEqual(OBSIDIAN_TEMPLATE);
   });
 
   it('should strip comments and trailing commas but leave strings alone', () => {

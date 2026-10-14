@@ -47,7 +47,7 @@ None blocking. The spike (section 0) decides one thing: whether the spinner is a
 - [x] Re-copy from the extension's `resources/templates/obsidian.jsonc`, which gained the same field.
 
 #### [MODIFY] `core/core.spec.ts`
-- [ ] Assert the Obsidian in-progress state carries `animatedIcon`, that no Standard state does, and that `validateTemplate` keeps the field on a custom template. The fixture comparison covers the re-copied file, now setting aside the in-progress colour as well as the description.
+- [x] Assert the Obsidian in-progress state carries `animatedIcon`, that no Standard state does, and that `validateTemplate` keeps the field on a custom template. The fixture comparison covers the re-copied file, now setting aside the in-progress colour as well as the description.
 
 #### [MODIFY] `core/UPSTREAM.md`
 - [ ] Record the new source commit `059524e` (v0.1.13), what was taken from it, and what was left: the task action helpers, `collectTasks`, `TaskActionCommands.ts` and `TaskCodeLensProvider.ts`.
