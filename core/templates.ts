@@ -53,7 +53,9 @@ export const OBSIDIAN_TEMPLATE: StateTemplate = {
       id: 'in_progress',
       label: 'In Progress',
       icon: 'sync',
-      color: 'charts.yellow',
+      animatedIcon: 'loading~spin',
+      // Upstream draws in-progress yellow; this mod draws it blue.
+      color: 'charts.blue',
       strikethrough: false,
       countsAsCompleted: false,
       nextState: 'x',

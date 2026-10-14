@@ -40,8 +40,8 @@ None blocking. The spike (section 0) decides one thing: whether the spinner is a
 - [x] Add `animatedIcon?: string` to `StateDefinition`, as upstream: shown instead of `icon` when motion is enabled.
 
 #### [MODIFY] `core/templates.ts`
-- [ ] Add `animatedIcon: 'loading~spin'` to the in-progress state of `OBSIDIAN_TEMPLATE`. `STANDARD_TEMPLATE` is untouched.
-- [ ] Give that state `color: 'charts.blue'` in place of upstream's `charts.yellow`, so in-progress tasks and their spinner draw blue (the `suggestion` theme key). Added at the owner's request on 2026-10-13, after approval; it is a deliberate difference from the extension, to be recorded in `UPSTREAM.md`.
+- [x] Add `animatedIcon: 'loading~spin'` to the in-progress state of `OBSIDIAN_TEMPLATE`. `STANDARD_TEMPLATE` is untouched.
+- [x] Give that state `color: 'charts.blue'` in place of upstream's `charts.yellow`, so in-progress tasks and their spinner draw blue (the `suggestion` theme key). Added at the owner's request on 2026-10-13, after approval; it is a deliberate difference from the extension, to be recorded in `UPSTREAM.md`.
 
 #### [MODIFY] `core/fixtures/obsidian.jsonc`
 - [ ] Re-copy from the extension's `resources/templates/obsidian.jsonc`, which gained the same field.
