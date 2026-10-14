@@ -24,6 +24,8 @@ Mirrors the spinner the VS Code extension gained in v0.1.13 (commit `059524e`): 
 
 None blocking. The spike (section 0) decides one thing: whether the spinner is a `Client` element, or, if that draws badly on either surface, a redraw of the pane on a timer. Record the result here before starting section 2.
 
+**Result, 2026-10-13: the spinner is a `Client` element.** In the terminal the spike's spinners turned, lined up with static rows, passed clicks on to the mod, stayed out of the Tab order, and twenty of them left the pane responsive. Section 2 was built on that, ahead of the Desktop Code tab check, because the pane falls back to the static glyph wherever a `Client` is missing or refused. If the Desktop check finds the `Client` draws badly there, the remedy is to leave Desktop on the static glyph or add the timed redraw for it; reopen this question then.
+
 ## Proposed Changes
 
 ### 0. Spike (do first; throwaway)
@@ -55,10 +57,10 @@ None blocking. The spike (section 0) decides one thing: whether the spinner is a
 ### 2. The mod
 
 #### [MODIFY] `.claude-plugin/plugin.json`
-- [ ] Add the `userConfig` field `animateTaskIcons`: boolean, default `true`, titled "Animate task icons", described as showing a rotating spinner for in-progress tasks and a static icon when off or when Claude Code's `prefersReducedMotion` is on.
+- [x] Add the `userConfig` field `animateTaskIcons`: boolean, default `true`, titled "Animate task icons", described as showing a rotating spinner for in-progress tasks and a static icon when off or when Claude Code's `prefersReducedMotion` is on.
 
 #### [MODIFY] `hooks/settings.ts`
-- [ ] Add `animateTaskIcons: boolean` to `Settings`, read with a default of `true`.
+- [x] Add `animateTaskIcons: boolean` to `Settings`, read with a default of `true`.
 
 #### [MODIFY] `hooks/rows.ts`
 - [ ] Add `isAnimated: boolean` to `TaskRow`: true when the task's state has an `animatedIcon`. Any value means the one animation the pane has, the spinner.

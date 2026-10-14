@@ -41,6 +41,12 @@
       "description": "Render completed and cancelled task labels with strikethrough styling.",
       "default": true
     },
+    "animateTaskIcons": {
+      "type": "boolean",
+      "title": "Animate task icons",
+      "description": "Show a rotating spinner for in-progress tasks. When off, or when Claude Code's prefersReducedMotion setting is on, a static icon is shown instead.",
+      "default": true
+    },
     "showProgressCount": {
       "type": "boolean",
       "title": "Show progress count",

@@ -9,6 +9,7 @@ export interface Settings {
   stateTemplate: TemplateName;
   customTemplatePath: string;
   strikeThroughCompleted: boolean;
+  animateTaskIcons: boolean;
   showProgressCount: boolean;
   hideCompletedByDefault: boolean;
   useH1AsGroupName: boolean;
@@ -41,6 +42,7 @@ export function readSettings(options: PluginOptions): Settings {
     stateTemplate: template === 'Obsidian Tasks' || template === 'Custom' ? template : 'Standard (GFM)',
     customTemplatePath: text('customTemplatePath', ''),
     strikeThroughCompleted: flag('strikeThroughCompleted', true),
+    animateTaskIcons: flag('animateTaskIcons', true),
     showProgressCount: flag('showProgressCount', true),
     hideCompletedByDefault: flag('hideCompletedByDefault', false),
     useH1AsGroupName: flag('useH1AsGroupName', false),
