@@ -458,6 +458,9 @@ for (const surface of SURFACES) {
   });
 }
 
+// The fallback after a spinner fails on a surface (the `ui.fault` hook) has no test here: the kit raises
+// that event only when a real surface module fails, and gives a test no call to raise it.
+
 test('a surface with no Client element draws the static in-progress glyph', OBSIDIAN, async ($, on) => {
   world(on, { [AUTH_PATH]: CYCLE });
   await $.session.start({ cwd: CWD, surface: 'vscode', isInteractive: true });

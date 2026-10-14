@@ -67,7 +67,11 @@ A throwaway mod in `scratch/spinner-spike/` (`/spin`): rows of `Text` indent, a 
 
 - **Test kit, `terminal` and `desktop`:** the `Client` draws, `ui.advance(80)` moves it one frame, a pointer `down` posted from the module arrives as `ui.message`, and the label still presses. The module's tree is read with `ui.find({ type: 'Text', in: '<client key>' })`.
 - **Terminal, owner's report** (dock, 49 columns; the CLI on PATH was 2.1.296): the spinners turn and line up with the static `◐` rows above and below; clicking a glyph raises the message count; Tab stops on the labels and the other Buttons only, never on a spinner; with twenty spinners the pane scrolls and responds normally.
-- **Desktop Code tab:** not yet seen.
+- **Desktop Code tab, owner's report** (dock, 62 columns): three spinners turn and line up, and a click on a glyph arrives. The blue (`suggestion`) looks the same as in the terminal.
+- **Twenty spinners fail in the Desktop Code tab.** They ran one cycle, then each turned into a dark brown "S" glyph. Three ran indefinitely. The mods API reports a failed `Client` through `ui.fault`, whose `run` phase lists "a flood" among its causes; that this was a flood is inferred, not yet read from the event. The limit between three and twenty, and whether a slower frame moves it, is what the extended spike measures (`m` steps 3, 5, 8, 12, 20 spinners; `s` switches 80 and 160 ms; a "faults:" line shows the last reason).
+- **In the Desktop Code tab `ui.focus` fired on clicks, not on Tab.** The trace read `engine > row-1 > engine` and did not change while tabbing. The state picker follows `ui.focus`, so there it would follow clicks only; not yet checked in the real pane.
+- **A table from `$.ui.resolve(e)` is completed with the elements its surface lacks, and those draw nothing.** `'Client' in el` is therefore true on `vscode`, where a `Client` then vanishes. Ask by `e.surface` instead. Found by a test on the `vscode` surface.
+- **The test kit cannot raise `ui.fault`.** It comes only from a real module failing, so the pane's fallback after a fault has no automated test.
 - **A state contract must lead with an export.** `types/index.d.ts` written as `declare module … { }` followed by `export {}` made `claude plugin validate` report some of its keys as undeclared. With an `export type` first it passed.
 
 ## Not yet verified

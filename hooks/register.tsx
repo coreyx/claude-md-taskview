@@ -107,7 +107,7 @@ interface Mod {
   viewKey: string;
   /** Per surface, whether the build refused Text inside a Button. */
   nestingBySurface: Map<string, { isRefused: boolean }>;
-  /** Surfaces whose build threw on the spinner's `Client`; they get the static glyph from then on. */
+  /** Surfaces where the spinner's `Client` threw as it was made or failed once drawn; they get the static glyph from then on. */
   spinnerRefused: Set<string>;
 }
 
@@ -325,6 +325,15 @@ export const register: Register = (on, options) => {
     }
 
     return heard;
+  });
+
+  // A surface reports a spinner that failed there (in the Desktop Code tab, twenty at once did, and
+  // each drew as a stray glyph). That surface gets the static glyph from then on; the engine redraws
+  // the pane by itself after a fault, so nothing more is asked for here.
+  on('ui.fault', { requestId: PANE }, async ($, e, next) => {
+    mod.spinnerRefused.add(e.surface);
+
+    return next(e);
   });
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
