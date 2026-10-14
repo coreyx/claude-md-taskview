@@ -412,40 +412,49 @@ describe('replaceStateChar', () => {
 
 // Ported from the extension's test/unit/tree.test.ts.
 describe('isMilestoneHeading', () => {
-  const defaultKeywords = ['Milestone', 'Release', 'Alpha', 'Beta'];
+  // Several keywords, to exercise matching beyond the single default.
+  const keywords = ['Milestone', 'Release', 'Alpha', 'Beta'];
 
   it('detects milestone keywords at the start of the heading, as whole words, in any case', () => {
-    expect(isMilestoneHeading('Milestone 1: Project Setup', defaultKeywords)).toBe(true);
-    expect(isMilestoneHeading('milestone 2', defaultKeywords)).toBe(true);
-    expect(isMilestoneHeading('MILESTONE', defaultKeywords)).toBe(true);
-    expect(isMilestoneHeading('Milestones', defaultKeywords)).toBe(true);
-    expect(isMilestoneHeading('Release 1.0.0', defaultKeywords)).toBe(true);
-    expect(isMilestoneHeading('Release-1 Checklist', defaultKeywords)).toBe(true);
-    expect(isMilestoneHeading('Alpha 1', defaultKeywords)).toBe(true);
-    expect(isMilestoneHeading('Beta Testing', defaultKeywords)).toBe(true);
-    expect(isMilestoneHeading('  Milestone 3', defaultKeywords)).toBe(true);
+    expect(isMilestoneHeading('Milestone 1: Project Setup', keywords)).toBe(true);
+    expect(isMilestoneHeading('milestone 2', keywords)).toBe(true);
+    expect(isMilestoneHeading('MILESTONE', keywords)).toBe(true);
+    expect(isMilestoneHeading('Milestone-1 checks', keywords)).toBe(true);
+    expect(isMilestoneHeading('Release 1.0.0', keywords)).toBe(true);
+    expect(isMilestoneHeading('Release-1 Checklist', keywords)).toBe(true);
+    expect(isMilestoneHeading('Alpha 1', keywords)).toBe(true);
+    expect(isMilestoneHeading('Beta Testing', keywords)).toBe(true);
+    expect(isMilestoneHeading('  Milestone 3', keywords)).toBe(true);
   });
 
   it('does not match a keyword that appears later in the heading', () => {
-    expect(isMilestoneHeading('Notes on Milestone 1', defaultKeywords)).toBe(false);
-    expect(isMilestoneHeading('Phase 2 milestone', defaultKeywords)).toBe(false);
-    expect(isMilestoneHeading('Pre-release Checklist', defaultKeywords)).toBe(false);
-    expect(isMilestoneHeading('Bookmark: Release process', defaultKeywords)).toBe(false);
-    expect(isMilestoneHeading('1. Milestone', defaultKeywords)).toBe(false);
+    expect(isMilestoneHeading('Notes on Milestone 1', keywords)).toBe(false);
+    expect(isMilestoneHeading('Phase 2 milestone', keywords)).toBe(false);
+    expect(isMilestoneHeading('Pre-release Checklist', keywords)).toBe(false);
+    expect(isMilestoneHeading('Bookmark: Release process', keywords)).toBe(false);
+    expect(isMilestoneHeading('1. Milestone', keywords)).toBe(false);
+  });
+
+  it('does not match a keyword in the plural', () => {
+    expect(isMilestoneHeading('Milestones', keywords)).toBe(false);
+    expect(isMilestoneHeading('Milestones overview', keywords)).toBe(false);
+    expect(isMilestoneHeading('Releases', keywords)).toBe(false);
+    expect(isMilestoneHeading('Betas', keywords)).toBe(false);
   });
 
   // Not upstream: the label the parse hands over has its bold and italic markers stripped already.
   it('matches a keyword wrapped in bold or italic markers in the source heading', () => {
-    const spec = parse('## **Milestone 1**: Setup\n## _Release_ 2\n');
-    expect(spec.headings.map((heading) => isMilestoneHeading(heading.label, defaultKeywords))).toEqual([true, true]);
+    const spec = parse('## **Milestone 3**: Launch\n## _Release_ 2\n');
+    expect(spec.headings.map((heading) => isMilestoneHeading(heading.label, keywords))).toEqual([true, true]);
   });
 
   it('does not falsely match normal headings or partial words', () => {
-    expect(isMilestoneHeading('Database Setup', defaultKeywords)).toBe(false);
-    expect(isMilestoneHeading('Architecture & Design', defaultKeywords)).toBe(false);
-    expect(isMilestoneHeading('Alphabetical Index', defaultKeywords)).toBe(false);
-    expect(isMilestoneHeading('Betatron Device', defaultKeywords)).toBe(false);
-    expect(isMilestoneHeading('Overview', defaultKeywords)).toBe(false);
+    expect(isMilestoneHeading('Database Setup', keywords)).toBe(false);
+    expect(isMilestoneHeading('Architecture & Design', keywords)).toBe(false);
+    expect(isMilestoneHeading('Alphabetical Index', keywords)).toBe(false);
+    expect(isMilestoneHeading('Betatron Device', keywords)).toBe(false);
+    expect(isMilestoneHeading('Milestoneish', keywords)).toBe(false);
+    expect(isMilestoneHeading('Overview', keywords)).toBe(false);
   });
 
   it('supports custom configured milestone keywords', () => {

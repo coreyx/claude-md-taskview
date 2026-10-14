@@ -4,6 +4,7 @@ import type { Engine } from 'claude-code/testing';
 
 import { drawPressable, strikeThrough } from './register';
 import type { RowElements } from './register';
+import { readSettings } from './settings';
 
 const SURFACES = ['terminal', 'desktop'] as const;
 const CWD = 'C:\\work';
@@ -593,6 +594,16 @@ test(
     await ui.unmount();
   },
 );
+
+test('milestoneKeywords defaults to Milestone only, and a configured list is kept', () => {
+  expect(readSettings({}).milestoneKeywords).toEqual(['Milestone']);
+  expect(readSettings({ milestoneKeywords: '' }).milestoneKeywords).toEqual(['Milestone']);
+  expect(readSettings({ milestoneKeywords: 'Milestone, Release, , Beta' }).milestoneKeywords).toEqual([
+    'Milestone',
+    'Release',
+    'Beta',
+  ]);
+});
 
 // As the engine raises a command the person typed.
 const typed = (command: string) => ({

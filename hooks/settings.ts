@@ -46,7 +46,7 @@ export function readSettings(options: PluginOptions): Settings {
     showProgressCount: flag('showProgressCount', true),
     hideCompletedByDefault: flag('hideCompletedByDefault', false),
     useH1AsGroupName: flag('useH1AsGroupName', false),
-    milestoneKeywords: text('milestoneKeywords', 'Milestone, Release, Alpha, Beta')
+    milestoneKeywords: text('milestoneKeywords', 'Milestone')
       .split(',')
       .map((keyword) => keyword.trim())
       .filter((keyword) => keyword !== ''),

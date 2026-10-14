@@ -36,7 +36,7 @@ Run `/md-tasks` in a folder that holds `spec/<name>/tasks.md` files. The pane op
   - With the **Obsidian Tasks** template a press goes not started `[ ]`, in progress `[/]`, done `[x]`, then back to not started.
 - An in-progress task shows a turning spinner, in blue. It is a static `◐` when `animateTaskIcons` is off or Claude Code's `prefersReducedMotion` setting is on. At most twelve spinners turn at once; in-progress tasks past the twelfth show the static `◐`.
 - Press the `↗` at the end of a heading or task row to open the file at that line in VS Code. This needs the `code` command on your `PATH`.
-- Headings that start with a milestone keyword show a flag, filled once every task beneath is done. A keyword later in a heading does not count, so `## Notes on Milestone 1` stays a plain heading.
+- Headings that start with a milestone keyword show a flag, filled once every task beneath is done. A keyword later in a heading, or in the plural, does not count, so `## Notes on Milestone 1` and `## Milestones` stay plain headings. The only keyword by default is `Milestone`.
 - The toolbar refreshes (`r`), hides or shows completed tasks (`f`), and expands or collapses everything (`e` / `c`).
 - With a multi-state template, each task row ends with a `▾`. Press it to open a row of buttons beneath the task, one per state, and press one to set it directly; the task is not changed until you pick. While the picker is open the arrow points up (`▴`); press it again to close the picker.
 
@@ -77,7 +77,7 @@ The dialog shown at install does not fill in the defaults of the text settings: 
 | `showProgressCount` | `true` | Show `(done/total)` beside groups and headings. |
 | `hideCompletedByDefault` | `false` | Start with completed tasks hidden. |
 | `useH1AsGroupName` | `false` | Name a group after the first level-1 heading in its task file instead of its folder. |
-| `milestoneKeywords` | `Milestone, Release, Alpha, Beta` | Comma-separated keywords that mark a heading as a milestone when the heading starts with one (any case, whole word, plurals allowed). A keyword later in the heading does not count. |
+| `milestoneKeywords` | `Milestone` | Comma-separated keywords that mark a heading as a milestone when the heading starts with one (any case, whole word). A keyword later in the heading, or in the plural, does not count. |
 
 A custom template uses the same `*.jsonc` format as the extension; see [its README](https://github.com/coreyx/vscode-md-taskview#-custom-state-template-example-jsonc). Give a state an `animatedIcon` (any value, such as `"loading~spin"`) and it draws with the spinner. A press follows each state's own `nextState`.
 
