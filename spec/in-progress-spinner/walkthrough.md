@@ -69,13 +69,15 @@ The 26 mod tests and 25 core tests from v0.1.1 still pass, with one updated: the
 ## Manual Verification
 **Done on the released v0.2.0, 2026-10-13.** The owner ran the seven checks in `scratch/pane-test/README.md` (a throwaway folder with one task file showing every state and another with fourteen tasks in progress) and reported every one as passing. Those cover steps 1, 2, 3, 4, 6 and the twelve-spinner limit of step 7 below. They were run in the terminal only.
 
-**Not yet run:** anything in the Desktop Code tab, where step 7 (the twelve-spinner limit) and step 8 (the state picker) matter most; step 5 (`prefersReducedMotion`); and step 9 (CPU use over a few minutes).
+Step 5 passed too: the owner turned reduced motion on in `/config` and the spinners went static in the same session, with no restart. The pane reads the setting each time it draws.
+
+**Not yet run:** anything in the Desktop Code tab, where step 7 (the twelve-spinner limit) and step 8 (the state picker) matter most; and step 9 (CPU use over a few minutes).
 
 1. With `stateTemplate` set to `Obsidian Tasks`, run `/md-tasks` in a folder with task files: a `[/]` task shows a blue spinner turning, in the terminal and in the Desktop Code tab.
 2. Press a not-started task: it becomes in progress and starts spinning. Press it again: done. Again: not started. `git diff` shows one character changed each time.
 3. Click directly on a spinner: the task moves to done.
 4. Set `animateTaskIcons` off in `/config`: the spinner becomes a static `◐`. Turn it back on.
-5. Set `prefersReducedMotion` to `true` in `~/.claude/settings.json` and start a new session: static `◐` again. Remove the setting.
+5. Turn reduced motion on, in `/config` or as `prefersReducedMotion: true` in `~/.claude/settings.json`: static `◐` again, without a new session. Turn it back off.
 6. Set `stateTemplate` to `Standard (GFM)`: pressing a task toggles `[ ]` and `[x]` only. Set it back.
 7. In the Desktop Code tab, put more than twelve tasks in progress: twelve spin, the rest show `◐`, and none turns into a stray glyph.
 8. In the Desktop Code tab with the Obsidian template, check how the state picker behaves: it follows the focus event, which fired there on clicks and not on Tab.
