@@ -1,5 +1,30 @@
 # Release Notes
 
+## v0.3.1 - 2026-10-13
+
+A fix for the state picker in the terminal, and a clearer control for opening it.
+
+### The state picker works with the mouse in the terminal
+
+With a multi-state template such as Obsidian Tasks, the picker that sets a task's state could not be used with the mouse in the terminal. Its states only highlighted when clicked, and while it was open, clicking anywhere in it copied text to the clipboard instead.
+
+The picker is now a row of buttons beneath the task, one per state, with the task's current state marked. Click one, or Tab to it and press Enter, to set that state; the picker then closes. It works the same way in the terminal and the Claude Desktop Code tab.
+
+### A dropdown arrow opens it
+
+The control at the end of a task row that opens the picker is now a dropdown arrow, `▾`, instead of a circle. It points up (`▴`) while the picker is open; press it again to close the picker without changing anything.
+
+Pressing a task itself still moves it to its next state, and `↗` still opens it in VS Code.
+
+### Updating
+
+From a shell:
+
+```bash
+claude plugin update md-taskview@claude-md-taskview
+```
+
+Then start a new session.
 ## v0.3.0 - 2026-10-13
 
 A clearer way to set a task's state, and fixes for how the pane looks in the Claude Desktop Code tab.

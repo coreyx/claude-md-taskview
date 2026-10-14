@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-10-13
+
 ### Changed
 - **State picker control:** the control at the end of a task row is now a dropdown arrow, `▾`, pointing up (`▴`) while the picker is open, instead of a circle.
 
