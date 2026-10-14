@@ -5,7 +5,7 @@ import { replaceStateChar } from '../core/mutate';
 import { getNextState } from '../core/templates';
 import type { SpecGroup, TaskNode } from '../core/types';
 import type { SpecGroup as ContractSpecGroup } from '../types';
-import { buildRows, collapsibleIds, findTask } from './rows';
+import { buildRows, collapsibleIds, findTask, stateGlyph } from './rows';
 import type { Row, TaskRow } from './rows';
 import { readSettings } from './settings';
 import { createSession, loadTemplate, poll, refresh } from './sync';
@@ -345,8 +345,7 @@ export const register: Register = (on, options) => {
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const el = $.ui.resolve(e);
     const { Box, Button, Text } = el;
-    // Asked by surface for the same reason as `Client` below: the mobile app's table has a Select that draws nothing.
-    const Select = e.surface !== 'mobile' && 'Select' in el ? el.Select : undefined;
+
     // Asked by surface, not by `'Client' in el`: a table is completed with the elements its surface
     // lacks, and those draw nothing, so a spinner would vanish there instead of falling back.
     const hasClient = e.surface === 'terminal' || e.surface === 'desktop';
@@ -378,7 +377,7 @@ export const register: Register = (on, options) => {
 
     // A multi-state template gets a control on each task row that opens a picker of every state,
     // in place of the extension's right-click "Set Task State" menu. Two states need no picker.
-    const hasPicker = Select !== undefined && template.states.length > 2;
+    const hasPicker = template.states.length > 2;
 
     /**
      * Indents a row and adds its controls after it: on a task row of a
@@ -480,26 +479,25 @@ export const register: Register = (on, options) => {
           indent,
           true,
         );
-        if (Select === undefined || !hasPicker || row.key !== pickerKey) return rowElement;
+        if (!hasPicker || row.key !== pickerKey) return rowElement;
 
+        // The picker is a Button per state, not a Select: in the terminal an open Select takes no
+        // mouse clicks, and a click there selected and copied text instead.
         return [
           rowElement,
-          <Box paddingLeft={indent + lead.length}>
-            <Select
-              key={`s-${row.key}`}
-              label="State"
-              options={template.states.map((state, index) => ({
-                value: String(index),
-                label: `[${state.char}] ${state.label}`,
-              }))}
-              value={String(template.states.indexOf(row.state))}
-              onSelect={async (value) => {
-                const picked = template.states[Number(value)];
-                // The picker closes on a pick, whether or not the state changed.
-                await update($, picker, () => null);
-                if (picked && picked.char !== row.task.char) await setTaskState($, mod, row.task, picked.char);
-              }}
-            />
+          <Box paddingLeft={indent + lead.length} columnGap={1} flexWrap="wrap">
+            {template.states.map((state, index) => (
+              <Button
+                key={`s-${row.key}-${index}`}
+                {...(state === row.state ? { variant: 'primary' as const } : {})}
+                label={`${stateGlyph(state)} ${state.label}`}
+                onPress={async () => {
+                  // The picker closes on a pick, whether or not the state changed.
+                  await update($, picker, () => null);
+                  if (state.char !== row.task.char) await setTaskState($, mod, row.task, state.char);
+                }}
+              />
+            ))}
           </Box>,
         ];
       }

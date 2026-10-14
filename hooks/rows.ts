@@ -142,6 +142,11 @@ export function findTask(groups: readonly SpecGroup[], key: string): TaskNode | 
   return among(group.rootTasks) ?? under(group.headings);
 }
 
+/** The glyph a state draws with: its icon's, else its own character, else a dot. */
+export function stateGlyph(state: StateDefinition): string {
+  return GLYPH_BY_ICON[state.icon] ?? (state.char.trim() || '•');
+}
+
 /** Ids of everything that can collapse: every spec group and heading. */
 export function collapsibleIds(groups: readonly SpecGroup[]): string[] {
   const ids: string[] = [];
@@ -197,7 +202,7 @@ function addTasks(rows: Row[], tasks: TaskNode[], groupIndex: number, depth: num
       depth,
       task,
       state,
-      glyph: GLYPH_BY_ICON[state.icon] ?? (state.char.trim() || '•'),
+      glyph: stateGlyph(state),
       color: state.color === undefined ? undefined : THEME_KEY_BY_COLOR[state.color],
       isStruck: state.strikethrough === true && options.settings.strikeThroughCompleted,
       isAnimated: state.animatedIcon !== undefined,

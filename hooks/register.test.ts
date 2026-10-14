@@ -308,28 +308,35 @@ for (const surface of SURFACES) {
       await ui.press({ key: 't-0-0' });
       expect(disk.files[AUTH_PATH]).toBe('- [x] Draft the plan\n- [-] Dropped idea\n');
 
+      /** Keys of the state buttons the picker shows; none while it is closed. */
+      const stateButtons = async () =>
+        (await ui.findAll({ type: 'Button' })).map((button) => button.key ?? '').filter((key) => key.startsWith('s-'));
+
       // The picker is closed until asked for, and opening it changes nothing on disk.
-      expect(await ui.find({ type: 'Select' })).toBeUndefined();
+      expect(await stateButtons()).toEqual([]);
       expect((await ui.find({ key: 'p-t-0-1' }))?.props).toMatchObject({ label: '▾' });
       await ui.press({ key: 'p-t-0-1' });
-      expect((await ui.find({ key: 's-t-0-1' }))?.props).toMatchObject({ value: '3' });
+      expect(await stateButtons()).toEqual(['s-t-0-1-0', 's-t-0-1-1', 's-t-0-1-2', 's-t-0-1-3', 's-t-0-1-4', 's-t-0-1-5']);
+      // The task's current state is the marked one.
+      expect((await ui.find({ key: 's-t-0-1-3' }))?.props).toMatchObject({ label: '⊘ Cancelled', variant: 'primary' });
+      expect((await ui.find({ key: 's-t-0-1-5' }))?.props.variant).toBeUndefined();
       expect((await ui.find({ key: 'p-t-0-1' }))?.props).toMatchObject({ label: '▴' });
       expect(disk.writes).toHaveLength(1);
 
       // One picker at a time: opening another row's closes this one.
       await ui.press({ key: 'p-t-0-0' });
-      expect((await ui.findAll({ type: 'Select' })).map((select) => select.key)).toEqual(['s-t-0-0']);
+      expect((await stateButtons()).every((key) => key.startsWith('s-t-0-0-'))).toBe(true);
       await ui.press({ key: 'p-t-0-1' });
 
-      // A pick writes the state and closes the picker.
-      await ui.select({ key: 's-t-0-1', value: '5' });
+      // A pick, by a plain press that the terminal's mouse reaches too, writes the state and closes the picker.
+      await ui.press({ key: 's-t-0-1-5' });
       expect(disk.files[AUTH_PATH]).toBe('- [x] Draft the plan\n- [!] Dropped idea\n');
-      expect(await ui.find({ type: 'Select' })).toBeUndefined();
+      expect(await stateButtons()).toEqual([]);
 
       // Pressing the control again closes it without a pick.
       await ui.press({ key: 'p-t-0-0' });
       await ui.press({ key: 'p-t-0-0' });
-      expect(await ui.find({ type: 'Select' })).toBeUndefined();
+      expect(await stateButtons()).toEqual([]);
       expect(disk.writes).toHaveLength(2);
       await ui.unmount();
     },

@@ -38,7 +38,7 @@ Run `/md-tasks` in a folder that holds `spec/<name>/tasks.md` files. The pane op
 - Press the `↗` at the end of a heading or task row to open the file at that line in VS Code. This needs the `code` command on your `PATH`.
 - Headings that contain a milestone keyword show a flag, filled once every task beneath is done.
 - The toolbar refreshes (`r`), hides or shows completed tasks (`f`), and expands or collapses everything (`e` / `c`).
-- With a multi-state template, each task row ends with a `▾`. Press it to open a picker of every state beneath the task, and pick one to set it directly; the task is not changed until you pick. While the picker is open the arrow points up (`▴`); press it again to close the picker.
+- With a multi-state template, each task row ends with a `▾`. Press it to open a row of buttons beneath the task, one per state, and press one to set it directly; the task is not changed until you pick. While the picker is open the arrow points up (`▴`); press it again to close the picker.
 
 The pane re-reads a task file within about two seconds of it changing on disk, and at once after Claude edits one.
 

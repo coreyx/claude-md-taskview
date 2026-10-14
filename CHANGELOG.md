@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **State picker control:** the control at the end of a task row is now a dropdown arrow, `▾`, pointing up (`▴`) while the picker is open, instead of a circle.
 
+### Fixed
+- **State picker in the terminal:** its states could not be picked with the mouse, and while it was open a click on its control copied text instead of closing it. The picker is now a row of buttons, one per state, with the task's current state marked, which mouse and keyboard both reach on every surface.
+
 ## [0.3.0] - 2026-10-13
 
 ### Changed
