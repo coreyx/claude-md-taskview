@@ -8,7 +8,7 @@ Everything automated passes. The spinner has been seen running only in the throw
 
 ### 0. Spike (throwaway, `scratch/spinner-spike/`, untracked)
 - Showed that a `Client` element, a region that redraws itself on the surface's own clock, works as the spinner on both surfaces: it turns, lines up with static rows, and passes a click on the glyph to the mod.
-- Found that the Desktop Code tab stops spinners when too many redraw at once: twenty at 80 ms a frame failed, each turning into a stray glyph, while twelve kept going, and twenty kept going at 160 ms.
+- Found that the Desktop Code tab stops spinners when too many redraw at once: twenty at 80 ms a frame failed, each turning into a stray glyph, while twelve kept going, and twenty kept going at 160 ms. The app's reason for stopping them was `flooded the page with messages`.
 - Found that in the Desktop Code tab the focus event fires on clicks, not on Tab.
 - Results are in [HANDOFF.md](../claude-md-taskview/HANDOFF.md).
 
@@ -81,7 +81,7 @@ None of these has been done on the real pane. They need the new build loaded, ei
 
 ## Follow-ups
 - **State picker in the Desktop Code tab.** If step 8 shows the picker cannot be reached by keyboard there, it needs another trigger on that surface.
-- **The cause of the Desktop failure is inferred.** The mods API lists "a flood" among the reasons a `Client` fails once running, and the measurements fit a rate limit, but the reason the app gave was not read. If the limit changes, `FRAME_MS` and `MAX_SPINNERS` are the two numbers to revisit.
+- **The Desktop limit is the app's, and may move.** The app stopped the twenty spinners with the reason `flooded the page with messages`, so it is a rate limit on what the spinners send the page. Where exactly it sits between 150 and 250 redraws a second is not known. If it changes, `FRAME_MS` and `MAX_SPINNERS` are the two numbers to revisit.
 - **In-progress stays yellow in the extension.** The blue is this mod's alone unless the extension follows.
 - **Release.** This is unreleased; it would be 0.2.0. Installed copies stay on 0.1.1 until then.
 - **The spikes** are still in `scratch/` (`mod-spike`, `spinner-spike`), untracked. Copies also sit in this session's hot-reload folder. They can be deleted.
