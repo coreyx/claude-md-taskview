@@ -62,7 +62,7 @@ The settings mirror the extension's settings of the same names. There are two wa
 }
 ```
 
-The key is the mod's name and its marketplace. A mod loaded with `--plugin-dir` is keyed `md-taskview` instead. An edit to the file takes effect in the next session you start.
+The key is the mod's name and its marketplace. A copy loaded with `--plugin-dir` or `CLAUDE_CODE_PLUGIN_DIRS` has no marketplace, so its settings are kept under `md-taskview@inline` instead (`/config` writes that key; `md-taskview` is read too). An edit to the file takes effect in the next session you start.
 
 The dialog shown at install does not fill in the defaults of the text settings: those fields start empty. Leave one empty and its default applies; you do not have to type it.
 
