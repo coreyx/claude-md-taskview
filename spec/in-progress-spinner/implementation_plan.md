@@ -86,7 +86,7 @@ None blocking. The spike (section 0) decides one thing: whether the spinner is a
 - [x] In "Settings", spell out how to change a setting: the `/config` row, and the `pluginConfigs` entry in `~/.claude/settings.json` with a worked example that sets `stateTemplate` to `Obsidian Tasks`, and say when each takes effect.
 
 #### [MODIFY] `CHANGELOG.md`
-- [ ] Under `[Unreleased]`, `Added`: the spinner, the `animateTaskIcons` setting, and the `animatedIcon` field for custom templates.
+- [x] Under `[Unreleased]`, `Added`: the spinner, the `animateTaskIcons` setting, and the `animatedIcon` field for custom templates.
 
 ## Verification Plan
 
