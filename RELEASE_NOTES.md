@@ -1,5 +1,38 @@
 # Release Notes
 
+## v0.4.0 - 2026-10-14
+
+Fewer false milestones: a heading now gets the milestone flag only when it begins with the word Milestone. This follows the same change in the [VS Code extension's v0.1.17](https://github.com/coreyx/vscode-md-taskview/releases/tag/v0.1.17).
+
+### A milestone keyword has to start the heading
+
+Before, a keyword anywhere in a heading made it a milestone, so notes and bookmarks that only mentioned one got the flag too. Now the keyword must come first, as a whole word, in any case:
+
+- `## Milestone 1: Project Setup`, `## MILESTONE 2` and `## **Milestone** 3` are milestones.
+- `## Notes on Milestone 1`, `## 1. Milestone` and `## Pre-release Checklist` are not.
+- `## Milestones` is not either: a heading like that is usually an overview of milestones rather than a milestone itself.
+- `## Milestone_notes` is not, because an underscore joins it into one word.
+
+### "Milestone" is the only default keyword
+
+`Release`, `Alpha` and `Beta` are no longer milestone keywords by default, so headings such as `## Release 1.0.0` or `## Beta Testing` now show as plain headings.
+
+If you want them back, set **Milestone keywords** (`milestoneKeywords`) in `/config`, for example to `Milestone, Release, Alpha, Beta`. If you already set that list yourself, nothing changes for you: your list is still used, with the new starts-with rule.
+
+### Underscores inside words are kept
+
+A heading or task label with doubled underscores inside a word, such as `Mile__stone__`, used to lose them, as if they were bold markers. They are now kept as typed. Emphasis around whole words, such as `_Milestone_` or `**Milestone**`, is still removed from labels.
+
+### Updating
+
+From a shell:
+
+```bash
+claude plugin update md-taskview@claude-md-taskview
+```
+
+Then start a new session.
+
 ## v0.3.1 - 2026-10-13
 
 A fix for the state picker in the terminal, and a clearer control for opening it.

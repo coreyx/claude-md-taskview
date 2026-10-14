@@ -7,10 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-14
+
 ### Changed
-- **Milestone detection:** a heading is a milestone only when it starts with a milestone keyword, in the singular. A keyword later in the heading or in the plural no longer counts, so headings such as `Notes on Milestone 1`, `Pre-release Checklist` or `Milestones` stay plain headings. Mirrors the VS Code extension's v0.1.17.
-- **Underscores in headings:** an underscore counts as part of a word, so `Milestone_notes` is not a milestone, and underscores inside a word are always kept as typed: `Mile__stone__` no longer loses them. Paired emphasis markers at word edges (`_Milestone_`, `__Milestone__`) and asterisk pairs anywhere (`Mile**stone**`) are still removed.
+- **Milestone detection:** a heading is a milestone only when it starts with a milestone keyword, in the singular. A keyword later in the heading or in the plural no longer counts, so headings such as `Notes on Milestone 1`, `Pre-release Checklist` or `Milestones` stay plain headings. An underscore counts as part of a word, so `Milestone_notes` is not a milestone either. Mirrors the VS Code extension's v0.1.17.
 - **Default milestone keywords:** `milestoneKeywords` now defaults to `Milestone` only; `Release`, `Alpha` and `Beta` are no longer defaults. A list you set yourself is unchanged.
+
+### Fixed
+- **Underscores inside a word:** a heading or task label such as `Mile__stone__` lost its doubled underscores, read as bold markers. Underscores inside a word are now kept as typed. Paired emphasis markers at word edges (`_Milestone_`, `__Milestone__`) and asterisk pairs anywhere (`Mile**stone**`) are still removed.
 
 ## [0.3.1] - 2026-10-13
 
