@@ -1,5 +1,27 @@
 # Release Notes
 
+## v0.4.1 - 2026-10-17
+
+A fix for the pane going empty partway through a session.
+
+### The pane no longer empties after Claude changes folder
+
+If Claude's shell changed folder during a session, for example with `cd spec/<name>` to work on a spec, the pane stopped finding your task files. It showed "No spec/*/tasks.md found in this folder." and Refresh did not bring the tasks back, though nothing was wrong with the files.
+
+The pane now always looks from the folder the session started in (its project root, which a shell `cd` does not move), so the tasks stay put wherever the shell goes. Ticking a task and opening one with `↗` work the same way.
+
+If you hit this before updating, asking Claude to `cd` back to the project folder brings the tasks back.
+
+### Updating
+
+From a shell:
+
+```bash
+claude plugin update md-taskview@claude-md-taskview
+```
+
+Then start a new session.
+
 ## v0.4.0 - 2026-10-14
 
 Fewer false milestones: a heading now gets the milestone flag only when it begins with the word Milestone. This follows the same change in the [VS Code extension's v0.1.17](https://github.com/coreyx/vscode-md-taskview/releases/tag/v0.1.17).

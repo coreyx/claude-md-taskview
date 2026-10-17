@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-10-17
+
+### Fixed
+- **The pane emptied after a `cd`:** once Claude's shell changed folder during a session, for example with `cd spec/<name>`, the pane showed "No spec/*/tasks.md found in this folder." and Refresh did not bring the tasks back. Ticking a task and `↗` were affected the same way. Every path is now read from the session's project root, which a shell `cd` does not move.
+
 ## [0.4.0] - 2026-10-14
 
 ### Changed
