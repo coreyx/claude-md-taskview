@@ -35,6 +35,8 @@ const MAX_SPINNERS = 12;
 const CONTROL_WIDTH = 2;
 // `cmd /c` re-reads its arguments as a command line, so a path holding one of these could run something else.
 const CMD_UNSAFE = /[&|<>^%!"]/;
+/** A path that names where it starts: a drive, or a leading slash or backslash (which covers a UNC share). */
+const ABSOLUTE = /^(?:[a-zA-Z]:[\\/]|[\\/])/;
 
 const groups = atom({ plugin: 'md-taskview', key: 'groups' } as const, []);
 const collapsed = atom({ plugin: 'md-taskview', key: 'collapsed' } as const, []);
@@ -137,14 +139,34 @@ interface Mod {
 // file, never into a closure or across an import. So everything that takes
 // `$` is declared here, and the files under hooks/ get closures instead.
 
+/**
+ * The session's project root, or undefined on a build that cannot say.
+ *
+ * Every path the mod uses is relative to this. A relative path handed to
+ * `$.fs` or `$.process` as it is would be read from the session's working
+ * directory, which a shell `cd` moves: after an agent ran
+ * `cd spec/<name>`, `spec/*` named nothing beneath it and the pane emptied.
+ * The root stays where the session started.
+ */
+async function rootOf($: EngineInterface): Promise<string | undefined> {
+  return $.session.root().catch(() => undefined);
+}
+
+/** Anchors a relative path to the session's project root; an absolute path is left as it is. */
+async function atRoot($: EngineInterface, path: string): Promise<string> {
+  const root = ABSOLUTE.test(path) ? undefined : await rootOf($);
+  if (root === undefined) return path;
+  return path === '.' || path === '' ? root : `${root.replace(/[\\/]+$/, '')}/${path}`;
+}
+
 /** What hooks/sync.ts and hooks/discover.ts need from Claude Code, as closures over `$`. */
 function hostOf($: EngineInterface): Host {
   return {
-    list: (path) => $.fs.list(path),
-    stat: (path) => $.fs.stat(path),
+    list: async (path) => $.fs.list(await atRoot($, path)),
+    stat: async (path) => $.fs.stat(await atRoot($, path)),
     read: async (path) => {
       // `$.fs.read` also has a bytes form, which this mod never asks for.
-      const content = await $.fs.read(path);
+      const content = await $.fs.read(await atRoot($, path));
       return typeof content === 'string' ? content : '';
     },
     setGroups: (parsed) => update($, groups, () => parsed),
@@ -168,7 +190,8 @@ async function isMotionAllowed($: EngineInterface, mod: Mod): Promise<boolean> {
 
 /** Loads what a folder's pane was left showing: its collapsed rows and the completed filter. */
 async function restoreView($: EngineInterface, mod: Mod, cwd: string): Promise<void> {
-  mod.viewKey = `view:${cwd}`;
+  // By root, so a /clear after a shell `cd` still finds the folder's view.
+  mod.viewKey = `view:${(await rootOf($)) ?? cwd}`;
   const saved = ((await $.store.get(mod.viewKey)) ?? {}) as { collapsed?: unknown; hideCompleted?: unknown };
   const ids = Array.isArray(saved.collapsed) ? saved.collapsed.filter((id) => typeof id === 'string') : [];
   const isHidden =
@@ -211,7 +234,7 @@ async function setTaskState($: EngineInterface, mod: Mod, task: TaskNode, nextCh
       return;
     }
 
-    await $.fs.write(task.filePath, changed);
+    await $.fs.write(await atRoot($, task.filePath), changed);
     await refresh(host, mod.session);
   } catch (failure) {
     $.ui.toast(`Markdown Tasks: could not update the task (${failure instanceof Error ? failure.message : failure})`);
@@ -244,14 +267,16 @@ async function registerCommand($: EngineInterface, mod: Mod): Promise<void> {
  * cannot start without a shell, so `cmd /c code` is the fallback, and only
  * for a path `cmd` would not read as anything but a path.
  *
- * @param filePath The task file, relative to the session's working directory, which the command runs in.
+ * @param filePath The task file, relative to the session's project root, which the command runs in.
  * @param line Zero-indexed line, as the parser counts.
  */
 async function openSource($: EngineInterface, filePath: string, line: number): Promise<void> {
   const target = `${filePath}:${line + 1}`;
+  // Not the session's working directory, which a shell `cd` may have moved below the root.
+  const root = await rootOf($);
   const opens = (argv: string[]): Promise<boolean> =>
     $.process
-      .run(argv, { timeoutMs: OPEN_TIMEOUT_MS })
+      .run(argv, { timeoutMs: OPEN_TIMEOUT_MS, ...(root === undefined ? {} : { cwd: root }) })
       .then((ran) => ran.exitCode === 0)
       .catch(() => false);
 

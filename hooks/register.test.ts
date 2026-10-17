@@ -39,6 +39,8 @@ function world(on: On, files: Record<string, string>, takenCommands: string[] = 
     files: { ...files },
     mtimes: Object.fromEntries(Object.keys(files).map((path) => [path, 1000])) as Record<string, number>,
     reads: [] as string[],
+    /** Every path the mod handed `$.fs`, as the hook saw it. */
+    asked: [] as string[],
     writes: [] as { path: string; text: string }[],
     toasts: [] as string[],
     commands: [] as string[],
@@ -68,6 +70,7 @@ function world(on: On, files: Record<string, string>, takenCommands: string[] = 
   };
 
   on('fs.list', (_$, e) => {
+    state.asked.push(e.path);
     const folder = relative(e.path);
     const prefix = folder === '' ? '' : `${folder}/`;
     const names = new Map<string, 'file' | 'dir'>();
@@ -79,12 +82,14 @@ function world(on: On, files: Record<string, string>, takenCommands: string[] = 
     return { value: [...names].map(([name, kind]) => ({ name, kind, size: 0, mtimeMs: 0, isLink: false })) };
   });
   on('fs.stat', (_$, e) => {
+    state.asked.push(e.path);
     const path = relative(e.path);
     const text = state.files[path];
     if (text === undefined) return { deny: `ENOENT: ${e.path}` };
     return { value: { kind: 'file' as const, size: text.length, mtimeMs: state.mtimes[path] ?? 0, isLink: false } };
   });
   on('fs.read', (_$, e) => {
+    state.asked.push(e.path);
     const path = relative(e.path);
     const text = state.files[path];
     if (text === undefined) return { deny: `ENOENT: ${e.path}` };
@@ -92,6 +97,7 @@ function world(on: On, files: Record<string, string>, takenCommands: string[] = 
     return { value: text };
   });
   on('fs.write', (_$, e) => {
+    state.asked.push(e.path);
     const path = relative(e.path);
     state.writes.push({ path, text: e.text });
     state.edit(path, e.text);
@@ -120,6 +126,8 @@ function world(on: On, files: Record<string, string>, takenCommands: string[] = 
   on('ui.log', () => ({ value: undefined }));
   on('ui.focus', () => ({}));
   on('session.start', (_$, e) => ({ cwd: e.cwd }));
+  // The project root, which a shell `cd` does not move. Without it a relative path would be read from this process's folder.
+  on('session.root', () => ({ value: CWD }));
   on('classic.SessionStart', () => ({}));
 
   return state;
@@ -381,12 +389,34 @@ test("Claude's own edit to a task file shows without waiting for a poll", async 
   await ui.unmount();
 });
 
+test('every path is read from the project root, not a working directory a shell cd moved', async ($, on) => {
+  // The test kit reads a relative path from its own process's folder, never C:\work, so it stands for a
+  // working directory an agent's `cd spec/<name>` moved: there, before 0.4.1, `spec/*` named nothing.
+  const disk = world(on, { [AUTH_PATH]: AUTH });
+  await $.session.start({ cwd: CWD, surface: 'terminal', isInteractive: true });
+  const ui = await $.ui.mount({ plugin: 'md-taskview', surface: 'terminal', component: 'Pane', requestId: 'md-tasks', props: PANE });
+
+  await ui.press({ key: 't-0-2' });
+  disk.edit(AUTH_PATH, AUTH);
+  await disk.clock.advance(1500);
+  await ui.press({ key: 'refresh' });
+
+  const underRoot = (path: string) => path.replace(/\\/g, '/').toLowerCase().startsWith('c:/work/');
+  expect(disk.asked.length).toBeGreaterThan(0);
+  expect(disk.asked.filter((path) => !underRoot(path))).toEqual([]);
+  expect(disk.writes.map((write) => write.path)).toEqual([AUTH_PATH]);
+  expect((await ui.find({ key: 'r-g-0' }))?.text).toContain('auth (2/3)');
+  await ui.unmount();
+});
+
 for (const surface of SURFACES) {
   test(`${surface}: the open control runs "code -g" at the row's line and leaves the task alone`, async ($, on) => {
     const disk = world(on, { [AUTH_PATH]: AUTH });
     const ran: string[][] = [];
+    const ranIn: (string | undefined)[] = [];
     on('process.run', (_$, e) => {
       ran.push([...e.argv]);
+      ranIn.push(e.init?.cwd);
       return { value: { exitCode: 0, stdout: '', stderr: '', isStdoutTruncated: false, isStderrTruncated: false } };
     });
     await $.session.start({ cwd: CWD, surface, isInteractive: true });
@@ -400,6 +430,8 @@ for (const surface of SURFACES) {
       ['code', '-g', `${AUTH_PATH}:3`],
       ['code', '-g', `${AUTH_PATH}:4`],
     ]);
+    // The path is relative to the project root, so that is where it runs, wherever the shell has moved to.
+    expect(ranIn).toEqual([CWD, CWD]);
     expect(disk.writes).toEqual([]);
     expect(await ui.find({ key: 'o-g-0' })).toBeUndefined();
     await ui.unmount();
