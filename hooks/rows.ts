@@ -212,10 +212,8 @@ function addTasks(rows: Row[], tasks: TaskNode[], groupIndex: number, depth: num
 }
 
 function groupTitle(group: SpecGroup, options: RowOptions): string {
-  if (options.settings.useH1AsGroupName) {
-    const firstH1 = group.headings.find((heading) => heading.level === 1);
-    if (firstH1) return firstH1.label;
-  }
+  // Recorded at parse time, since a plan's H1 is trimmed away with its other sections.
+  if (options.settings.useH1AsGroupName && group.h1Label) return group.h1Label;
   return group.name;
 }
 

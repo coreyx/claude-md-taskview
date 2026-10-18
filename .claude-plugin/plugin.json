@@ -1,7 +1,7 @@
 {
   "name": "md-taskview",
   "version": "0.4.1",
-  "description": "A pane showing the milestone and task tree of spec/*/tasks.md files; press a task to tick it",
+  "description": "A pane showing the milestone and task tree of spec/*/tasks.md and implementation_plan.md files; press a task to tick it",
   "author": {
     "name": "Corey Struzan"
   },
@@ -16,11 +16,17 @@
       "description": "Where spec folders are, relative to the working directory. * matches one folder level. Leave empty for the default: spec/*",
       "default": "spec/*"
     },
+    "taskFileNames": {
+      "type": "string",
+      "title": "Task file names",
+      "description": "Comma-separated file names containing tasks inside each spec folder. For implementation_plan.md, only the tasks under its Proposed Changes heading are shown. Leave empty for the default: tasks.md, implementation_plan.md",
+      "default": "tasks.md, implementation_plan.md"
+    },
     "taskFileName": {
       "type": "string",
-      "title": "Task file name",
-      "description": "File name containing task definitions inside each spec folder. Leave empty for the default: tasks.md",
-      "default": "tasks.md"
+      "title": "Task file name (deprecated)",
+      "description": "Deprecated: use Task file names. A name set here is added to that list. Leave empty.",
+      "default": ""
     },
     "stateTemplate": {
       "type": "string",

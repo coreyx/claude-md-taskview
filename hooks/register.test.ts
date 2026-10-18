@@ -4,7 +4,7 @@ import type { Engine } from 'claude-code/testing';
 
 import { drawPressable, strikeThrough } from './register';
 import type { RowElements } from './register';
-import { readSettings } from './settings';
+import { readSettings, resolveTaskFileNames } from './settings';
 
 const SURFACES = ['terminal', 'desktop'] as const;
 const CWD = 'C:\\work';
@@ -301,7 +301,9 @@ for (const surface of SURFACES) {
     world(on, { 'README.md': 'nothing here' });
     const ui = await start($);
 
-    expect(await ui.find({ type: 'Text', text: 'No spec/*/tasks.md found in this folder.' })).toBeDefined();
+    expect(
+      await ui.find({ type: 'Text', text: 'No spec/*/tasks.md or spec/*/implementation_plan.md found in this folder.' }),
+    ).toBeDefined();
     await ui.unmount();
   });
 
@@ -635,6 +637,82 @@ test('milestoneKeywords defaults to Milestone only, and a configured list is kep
     'Release',
     'Beta',
   ]);
+});
+
+test('task file names resolve as in the extension: the list, then the deprecated single name', () => {
+  expect(resolveTaskFileNames('', '')).toEqual(['tasks.md', 'implementation_plan.md']);
+  expect(resolveTaskFileNames(' , ', '')).toEqual(['tasks.md', 'implementation_plan.md']);
+  expect(resolveTaskFileNames('tasks.md', 'todo.md')).toEqual(['tasks.md', 'todo.md']);
+  // Trimmed, blanks dropped, and de-duplicated case-insensitively, keeping the first spelling.
+  expect(resolveTaskFileNames(' A.md , a.MD ,, b.md', 'b.md')).toEqual(['A.md', 'b.md']);
+  expect(readSettings({}).taskFileNames).toEqual(['tasks.md', 'implementation_plan.md']);
+  expect(readSettings({ taskFileNames: 'tasks.md', taskFileName: '' }).taskFileNames).toEqual(['tasks.md']);
+});
+
+const PLAN_PATH = 'spec/auth/implementation_plan.md';
+const PLAN = `# Auth plan
+## Open Questions
+- [ ] A stray question
+## Proposed Changes
+### Server
+#### [NEW] \`src/limiter.ts\`
+- [x] Write the limiter
+- [ ] Test it
+## Verification Plan
+1. Run it.
+`;
+
+/** Every line the pane draws, joined: enough to say what is on it and what is not. */
+const paneText = async (ui: { find: (query: { type: string }) => Promise<{ text: string } | undefined> }) =>
+  (await ui.find({ type: 'Box' }))?.text ?? '';
+
+test('a plan shows only its Proposed Changes, and a folder with both files gives a group for each', async ($, on) => {
+  const disk = world(on, { [AUTH_PATH]: AUTH, [PLAN_PATH]: PLAN, 'spec/billing/implementation_plan.md': PLAN });
+  await $.session.start({ cwd: CWD, surface: 'terminal', isInteractive: true });
+  const ui = await $.ui.mount({ plugin: 'md-taskview', surface: 'terminal', component: 'Pane', requestId: 'md-tasks', props: PANE });
+
+  // Sorted by name; the folder holding both files names each group after its file.
+  expect((await ui.find({ key: 'r-g-0' }))?.text).toContain('auth (implementation_plan.md) (1/2)');
+  expect((await ui.find({ key: 'r-g-1' }))?.text).toContain('auth (tasks.md) (2/3)');
+  expect((await ui.find({ key: 'r-g-2' }))?.text).toContain('billing (1/2)');
+
+  // The plan's top level is the area under Proposed Changes; its other sections are left out, and backticks are stripped.
+  expect((await ui.find({ key: 'r-h-0-4' }))?.text).toContain('Server');
+  expect((await ui.find({ key: 'r-h-0-5' }))?.text).toContain('[NEW] src/limiter.ts');
+  const text = await paneText(ui);
+  for (const absent of ['Auth plan', 'Open Questions', 'A stray question', 'Proposed Changes', 'Verification Plan']) {
+    expect(text).not.toContain(absent);
+  }
+
+  // A press in a plan writes its one character, as in tasks.md.
+  await ui.press({ key: 't-0-7' });
+  expect(disk.writes).toEqual([{ path: PLAN_PATH, text: PLAN.replace('- [ ] Test it', '- [x] Test it') }]);
+  expect((await ui.find({ key: 'r-g-0' }))?.text).toContain('(2/2)');
+  await ui.unmount();
+});
+
+test(
+  'useH1AsGroupName names a plan after its H1, though the H1 is not drawn',
+  { options: { useH1AsGroupName: true } },
+  async ($, on) => {
+    world(on, { [PLAN_PATH]: PLAN });
+    await $.session.start({ cwd: CWD, surface: 'terminal', isInteractive: true });
+    const ui = await $.ui.mount({ plugin: 'md-taskview', surface: 'terminal', component: 'Pane', requestId: 'md-tasks', props: PANE });
+
+    // The H1 is cut away with the plan's other sections, but still names the group.
+    expect((await ui.find({ key: 'r-g-0' }))?.text).toContain('Auth plan (1/2)');
+    await ui.unmount();
+  },
+);
+
+test('task file names set to tasks.md alone leave plans out', { options: { taskFileNames: 'tasks.md' } }, async ($, on) => {
+  world(on, { [AUTH_PATH]: AUTH, [PLAN_PATH]: PLAN });
+  await $.session.start({ cwd: CWD, surface: 'terminal', isInteractive: true });
+  const ui = await $.ui.mount({ plugin: 'md-taskview', surface: 'terminal', component: 'Pane', requestId: 'md-tasks', props: PANE });
+
+  expect((await ui.find({ key: 'r-g-0' }))?.text).toContain('auth (2/3)');
+  expect(await ui.find({ key: 'r-g-1' })).toBeUndefined();
+  await ui.unmount();
 });
 
 // As the engine raises a command the person typed.

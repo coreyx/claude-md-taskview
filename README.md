@@ -1,8 +1,8 @@
 # Markdown Tasks for Claude Code (`claude-md-taskview`)
 
-A Claude Code mod that draws the milestone and task tree of your `spec/*/tasks.md` files in a pane beside the transcript, in the terminal and in the Claude Desktop Code tab. It lets you follow an agent's progress through a task list, and tick tasks yourself, without opening an editor.
+A Claude Code mod that draws the milestone and task tree of your `spec/*/tasks.md` and `spec/*/implementation_plan.md` files in a pane beside the transcript, in the terminal and in the Claude Desktop Code tab. It lets you follow an agent's progress through a task list, and tick tasks yourself, without opening an editor.
 
-It is the same product as the [Markdown Tasks View extension for VS Code](https://github.com/coreyx/vscode-md-taskview), on a second host. The parser is a copy of the extension's, so both read a `tasks.md` the same way.
+It is the same product as the [Markdown Tasks View extension for VS Code](https://github.com/coreyx/vscode-md-taskview), on a second host. The parser is a copy of the extension's, so both read a task file the same way.
 
 ## Requirements
 
@@ -27,7 +27,9 @@ The Desktop Code tab takes no `--plugin-dir` flag. To try a clone there, name it
 
 ## Use
 
-Run `/md-tasks` in a folder that holds `spec/<name>/tasks.md` files. The pane opens beside the transcript; it never opens by itself.
+Run `/md-tasks` in a folder that holds `spec/<name>/tasks.md` or `spec/<name>/implementation_plan.md` files. The pane opens beside the transcript; it never opens by itself.
+
+For an `implementation_plan.md`, the pane shows only the tasks under its `## Proposed Changes` heading, with its areas as the top level; the plan's other sections and any checkbox outside that heading are left out and not counted. A plan without that heading is shown whole, minus headings with no tasks. A spec folder holding both files gets a group for each, named `<folder> (tasks.md)` and `<folder> (implementation_plan.md)`.
 
 - Each spec folder is a group, with its headings and tasks nested beneath it and a `(done/total)` count.
 - Press a group or a heading to collapse or expand it.
@@ -69,7 +71,8 @@ The dialog shown at install does not fill in the defaults of the text settings: 
 | Setting | Default | Description |
 | :--- | :--- | :--- |
 | `specPathPattern` | `spec/*` | Where spec folders are, relative to the working directory. `*` matches one folder level. |
-| `taskFileName` | `tasks.md` | The task file inside each spec folder. |
+| `taskFileNames` | `tasks.md, implementation_plan.md` | Comma-separated task file names looked for in each spec folder. For `implementation_plan.md`, only the tasks under `## Proposed Changes` are shown. |
+| `taskFileName` | (empty) | Deprecated: use `taskFileNames`. A name set here is added to that list. |
 | `stateTemplate` | `Standard (GFM)` | `Standard (GFM)`: done and not done only. `Obsidian Tasks`: also in progress `[/]`, cancelled `[-]`, needs clarification `[?]` and important `[!]`. `Custom`: your own template. |
 | `customTemplatePath` | (empty) | Path to a `*.jsonc` state template, used when `stateTemplate` is `Custom`. |
 | `strikeThroughCompleted` | `true` | Strike through and dim completed and cancelled tasks. |
@@ -90,7 +93,7 @@ A custom template uses the same `*.jsonc` format as the extension; see [its READ
 - **In-progress tasks are blue**, where the extension draws them yellow.
 - **Reduced motion follows Claude Code**, through its `prefersReducedMotion` setting, not VS Code's `accessibility.reducedMotion`. The spinner needs the terminal or the Desktop Code tab; other surfaces show the static icon.
 - **Jump-to-source opens VS Code only**, at the line, in its text editor. There are no Markdown-preview navigation modes and no "Create Sample Spec" command.
-- **Spec folders are found one level per `*`.** `spec/*` finds `spec/<name>/tasks.md`; it does not search deeper folders, and there are no separate include and exclude patterns.
+- **Spec folders are found one level per `*`.** `spec/*` finds `spec/<name>/tasks.md`; it does not search deeper folders, as the extension's `spec/**` patterns do,, and there are no separate include and exclude patterns.
 - **Strikethrough is drawn two ways.** The terminal strikes a completed task's label through as a text style; on builds too old to style a pressable row's label, it is only dimmed there. The Desktop Code tab ignores that style, so there the label carries a stroke on each character, the way the extension draws it.
 - The pane exists only in Claude Code surfaces (terminal, Desktop Code tab), not in regular Claude chat.
 

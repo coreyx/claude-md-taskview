@@ -5,7 +5,8 @@ export type TemplateName = 'Standard (GFM)' | 'Obsidian Tasks' | 'Custom';
 /** The mod's `userConfig` values, typed and with defaults filled in. */
 export interface Settings {
   specPathPattern: string;
-  taskFileName: string;
+  /** The task file names looked for in each spec folder, in order, never empty. */
+  taskFileNames: string[];
   stateTemplate: TemplateName;
   customTemplatePath: string;
   strikeThroughCompleted: boolean;
@@ -14,6 +15,30 @@ export interface Settings {
   hideCompletedByDefault: boolean;
   useH1AsGroupName: boolean;
   milestoneKeywords: string[];
+}
+
+export const DEFAULT_TASK_FILE_NAMES = ['tasks.md', 'implementation_plan.md'];
+
+/**
+ * The task file names to discover, as the extension resolves them: the
+ * configured list, then the deprecated single `taskFileName` when it is set,
+ * trimmed and de-duplicated case-insensitively, keeping the first spelling
+ * seen. An empty result falls back to the defaults.
+ *
+ * @param list Comma-separated names, as the `taskFileNames` option holds them.
+ * @param legacyName The deprecated `taskFileName` option, or empty.
+ */
+export function resolveTaskFileNames(list: string, legacyName: string): string[] {
+  const resolved: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of [...list.split(','), legacyName]) {
+    const name = raw.trim();
+    if (name !== '' && !seen.has(name.toLowerCase())) {
+      seen.add(name.toLowerCase());
+      resolved.push(name);
+    }
+  }
+  return resolved.length > 0 ? resolved : [...DEFAULT_TASK_FILE_NAMES];
 }
 
 /**
@@ -38,7 +63,7 @@ export function readSettings(options: PluginOptions): Settings {
 
   return {
     specPathPattern: text('specPathPattern', 'spec/*'),
-    taskFileName: text('taskFileName', 'tasks.md'),
+    taskFileNames: resolveTaskFileNames(text('taskFileNames', ''), text('taskFileName', '')),
     stateTemplate: template === 'Obsidian Tasks' || template === 'Custom' ? template : 'Standard (GFM)',
     customTemplatePath: text('customTemplatePath', ''),
     strikeThroughCompleted: flag('strikeThroughCompleted', true),

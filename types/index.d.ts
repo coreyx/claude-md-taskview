@@ -52,6 +52,8 @@ export interface SpecGroup {
   headings: HeadingNode[];
   rootTasks: TaskNode[];
   stats: TaskStats;
+  /** First top-level '#' heading, kept for useH1AsGroupName after a plan's headings are trimmed. */
+  h1Label?: string;
 }
 
 declare module 'claude-code' {

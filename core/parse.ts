@@ -144,6 +144,7 @@ export function parseTasks(
 
   // Calculate recursive statistics
   const stats = calculateAggregateStats(rootTasks, headings, template);
+  const h1Label = headings.find((heading) => heading.level === 1)?.label;
 
   return {
     type: 'specGroup',
@@ -154,6 +155,7 @@ export function parseTasks(
     headings,
     rootTasks,
     stats,
+    ...(h1Label === undefined ? {} : { h1Label }),
   };
 }
 
@@ -254,13 +256,26 @@ function addStats(target: TaskStats, source: TaskStats): void {
 }
 
 /**
- * Strips bold and italic markdown delimiters from text (e.g. `**text**`, `*text*`, `__text__`, `_text_`).
+ * Strips bold and italic markdown delimiters from text (e.g. `**text**`, `*text*`, `__text__`, `_text_`)
+ * and the backticks of inline code spans, keeping the code itself exactly as written.
  * Preserves identifiers containing underscores (snake_case) and math operators.
  */
 export function stripMarkdownFormatting(text: string): string {
   if (!text) return '';
 
-  let clean = text;
+  // Code spans are set aside behind placeholders first, so emphasis stripping never touches the
+  // '*' and '_' inside them (`__init__` keeps its underscores). A span is a run of backticks, some
+  // content, and a closing run of the same length; an unmatched backtick stays as written.
+  const codeSpans: string[] = [];
+  let clean = text.replace(/(?<!`)(`+)(?!`)(.+?)(?<!`)\1(?!`)/g, (_match, _ticks: string, content: string) => {
+    // As in CommonMark, one space is trimmed from each side when both are present, so `` `a` `` reads `a`
+    const code =
+      content.length > 2 && content.startsWith(' ') && content.endsWith(' ') && content.trim()
+        ? content.slice(1, -1)
+        : content;
+    codeSpans.push(code);
+    return `\uE000${codeSpans.length - 1}\uE001`;
+  });
 
   // Underscore emphasis must start and end at a word edge: whitespace, a symbol, or punctuation other than
   // '_' itself, so underscores doubled inside a word (Mile__stone__) stay literal as in CommonMark.
@@ -278,6 +293,9 @@ export function stripMarkdownFormatting(text: string): string {
 
   // 4. Single delimiter: _text_ (italic with underscores - CommonMark word boundary rules)
   clean = clean.replace(/(?:^|(?<=[\s\p{S}]|[^\P{P}_]))_([^_\s](?:.*?[^_\s])?)_(?=$|[\s\p{S}]|[^\P{P}_])/gu, '$1');
+
+  // 5. Put the code spans back, without their backticks
+  clean = clean.replace(/\uE000(\d+)\uE001/g, (_match, index: string) => codeSpans[Number(index)] ?? '');
 
   return clean.trim();
 }

@@ -1,4 +1,5 @@
 import { parseTasks } from '../core/parse';
+import { isPlanFile, toPlanTaskSection } from '../core/plan';
 import type { StateTemplate } from '../core/templates';
 import { OBSIDIAN_TEMPLATE, STANDARD_TEMPLATE, parseJsonc, validateTemplate } from '../core/templates';
 import type { SpecGroup } from '../core/types';
@@ -74,7 +75,9 @@ export async function refresh(host: Host, session: Session): Promise<void> {
     const parsed: SpecGroup[] = [];
     for (const spec of specs) {
       const content = await host.read(spec.taskFilePath);
-      parsed.push(parseTasks(content, spec.name, spec.taskFilePath, spec.folderPath, session.template));
+      const group = parseTasks(content, spec.name, spec.taskFilePath, spec.folderPath, session.template);
+      // A plan shows only its task section, as in the extension's tree.
+      parsed.push(isPlanFile(spec.taskFilePath) ? toPlanTaskSection(group) : group);
     }
 
     session.specs = specs;

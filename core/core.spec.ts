@@ -3,6 +3,8 @@ import obsidianJsonc from './fixtures/obsidian.jsonc?raw';
 import { isMilestoneHeading } from './milestones';
 import { replaceStateChar } from './mutate';
 import { parseTasks, stripMarkdownFormatting } from './parse';
+import { isPlanFile, toPlanTaskSection } from './plan';
+import type { SpecGroup, TaskNode } from './types';
 import {
   OBSIDIAN_TEMPLATE,
   STANDARD_TEMPLATE,
@@ -151,6 +153,25 @@ Some introductory paragraph text without tasks.
       'Maintain snake_case_identifier and math 2 * 3 = 6 intact',
     ]);
     expect(stripMarkdownFormatting('')).toBe('');
+  });
+
+  it('should strip inline code backticks and keep the code exactly as written', () => {
+    const strip = stripMarkdownFormatting;
+    expect(strip('[MODIFY] `src/a.ts`')).toBe('[MODIFY] src/a.ts');
+    expect(strip('`a` and `b`')).toBe('a and b');
+    expect(strip('``a`b``')).toBe('a`b');
+    expect(strip('`` `a` ``')).toBe('`a`');
+    expect(strip('`__init__`')).toBe('__init__');
+    expect(strip('Call `**kwargs` here')).toBe('Call **kwargs here');
+    expect(strip('**`bold code`**')).toBe('bold code');
+    expect(strip('a lone ` backtick')).toBe('a lone ` backtick');
+    expect(strip('an empty `` pair')).toBe('an empty `` pair');
+    expect(strip('`unclosed and `` mismatched')).toBe('`unclosed and `` mismatched');
+  });
+
+  it('should record the first top-level H1 label', () => {
+    expect(parse('Intro\n# First Title\n## Sub\n# Second Title').h1Label).toBe('First Title');
+    expect(parse('## Only H2').h1Label).toBeUndefined();
   });
 
   it('should keep underscores inside words and remove only paired emphasis markers', () => {
@@ -508,5 +529,134 @@ describe('isMilestoneHeading', () => {
     expect(isMilestoneHeading('Sprint 4', customKeywords)).toBe(true);
     expect(isMilestoneHeading('Phase 1', customKeywords)).toBe(true);
     expect(isMilestoneHeading('Milestone 1', customKeywords)).toBe(false);
+  });
+});
+
+// Ported from the extension's test/unit/planTaskSection.test.ts.
+describe('isPlanFile and toPlanTaskSection', () => {
+  const PLAN_FILE = '/workspace/spec/auth/implementation_plan.md';
+
+  /** A plan shaped like the spec-plan template, with one stray checkbox outside the task section. */
+  const PLAN = [
+    '---',
+    'status: draft',
+    '---',
+    '',
+    '# Add rate limiting',
+    '',
+    'Summary.',
+    '',
+    '## User Review Required',
+    '> [!IMPORTANT]',
+    '> Something to sign off.',
+    '',
+    '## Open Questions',
+    '- [ ] A stray checkbox outside the task section',
+    '',
+    '## Proposed Changes',
+    '',
+    '### Configuration',
+    '#### [MODIFY] `package.json`',
+    '- [x] Add the setting',
+    '- [ ] Describe it',
+    '',
+    '### Empty area',
+    'Prose only, no tasks.',
+    '',
+    '### Server',
+    'Intro text.',
+    '#### [NEW] `src/limiter.ts`',
+    '- [ ] Write the limiter',
+    '',
+    '## Verification Plan',
+    '### Automated Tests',
+    '1. A numbered step, not a task.',
+  ].join('\n');
+
+  const parsePlan = (content: string) => parseTasks(content, 'auth', PLAN_FILE, FOLDER, STANDARD_TEMPLATE);
+
+  /** Every task in a group, depth-first; stands in for upstream's collectTasks, which is not copied. */
+  const tasksOf = (spec: SpecGroup): TaskNode[] => {
+    const all: TaskNode[] = [];
+    const addTasks = (tasks: TaskNode[]): void => tasks.forEach((task) => (all.push(task), addTasks(task.subTasks)));
+    const addHeadings = (headings: SpecGroup['headings']): void =>
+      headings.forEach((heading) => (addTasks(heading.tasks), addHeadings(heading.children)));
+    addTasks(spec.rootTasks);
+    addHeadings(spec.headings);
+    return all;
+  };
+
+  it('matches implementation_plan.md by base name, in any case', () => {
+    expect(isPlanFile(PLAN_FILE)).toBe(true);
+    expect(isPlanFile('spec\\auth\\IMPLEMENTATION_PLAN.md')).toBe(true);
+    expect(isPlanFile('/workspace/spec/auth/tasks.md')).toBe(false);
+    expect(isPlanFile('/workspace/spec/auth/old_implementation_plan.md')).toBe(false);
+  });
+
+  it('shows the areas under Proposed Changes as the top level, without the section heading itself', () => {
+    const view = toPlanTaskSection(parsePlan(PLAN));
+    expect(view.headings.map((h) => h.label)).toEqual(['Configuration', 'Server']);
+    expect(view.headings[0]?.children.map((h) => h.label)).toEqual(['[MODIFY] package.json']);
+    expect(view.headings[1]?.children.map((h) => h.label)).toEqual(['[NEW] src/limiter.ts']);
+  });
+
+  it('neither shows nor counts a checkbox outside the task section', () => {
+    const view = toPlanTaskSection(parsePlan(PLAN));
+    expect(view.stats.totalCountable).toBe(3);
+    expect(view.stats.completedCount).toBe(1);
+    expect(tasksOf(view).map((t) => t.cleanText)).not.toContain('A stray checkbox outside the task section');
+  });
+
+  it('drops an area with no tasks and keeps one whose tasks sit only in a child heading', () => {
+    const labels = toPlanTaskSection(parsePlan(PLAN)).headings.map((h) => h.label);
+    expect(labels).not.toContain('Empty area');
+    expect(labels).toContain('Server');
+  });
+
+  it('keeps the whole document, minus headings without tasks, when there is no Proposed Changes heading', () => {
+    const plan = ['# Title', '## Notes', 'Prose.', '## Steps', '- [ ] One', '- [x] Two'].join('\n');
+    const view = toPlanTaskSection(parsePlan(plan));
+    expect(view.headings.map((h) => h.label)).toEqual(['Title']);
+    expect(view.headings[0]?.children.map((h) => h.label)).toEqual(['Steps']);
+    expect(view.stats.totalCountable).toBe(2);
+  });
+
+  it('finds the section heading in any case and at any level', () => {
+    const plan = ['# Title', '### proposed CHANGES', '#### Area', '- [ ] Task'].join('\n');
+    expect(toPlanTaskSection(parsePlan(plan)).headings.map((h) => h.label)).toEqual(['Area']);
+  });
+
+  it('takes tasks written directly under the section as root tasks', () => {
+    const plan = ['## Proposed Changes', '- [ ] Direct task', '### Area', '- [ ] Nested task'].join('\n');
+    const view = toPlanTaskSection(parsePlan(plan));
+    expect(view.rootTasks.map((t) => t.cleanText)).toEqual(['Direct task']);
+    expect(view.stats.totalCountable).toBe(2);
+  });
+
+  it('keeps the H1 label and does not modify its input', () => {
+    const spec = parsePlan(PLAN);
+    const before = JSON.stringify(spec);
+    const view = toPlanTaskSection(spec);
+    expect(view.h1Label).toBe('Add rate limiting');
+    expect(JSON.stringify(spec)).toBe(before);
+  });
+
+  // Not upstream: edge cases its author listed on 2026-10-18 as untested there.
+  it('matches the section by its cleaned label, and takes the first of two', () => {
+    const bold = ['## **Proposed Changes**', '### Area', '- [ ] Task'].join('\n');
+    expect(toPlanTaskSection(parsePlan(bold)).headings.map((h) => h.label)).toEqual(['Area']);
+
+    const suffixed = ['# Title', '## Proposed Changes (v2)', '### Area', '- [ ] Task'].join('\n');
+    expect(toPlanTaskSection(parsePlan(suffixed)).headings.map((h) => h.label)).toEqual(['Title']);
+
+    const twice = ['## Proposed Changes', '### First', '- [ ] A', '## Proposed Changes', '### Second', '- [ ] B'].join('\n');
+    expect(toPlanTaskSection(parsePlan(twice)).headings.map((h) => h.label)).toEqual(['First']);
+  });
+
+  it('gives an empty group with no count when the section has no tasks', () => {
+    const view = toPlanTaskSection(parsePlan(['## Proposed Changes', 'Nothing yet.', '## Other', '- [ ] Elsewhere'].join('\n')));
+    expect(view.headings).toEqual([]);
+    expect(view.rootTasks).toEqual([]);
+    expect(view.stats.totalCountable).toBe(0);
   });
 });

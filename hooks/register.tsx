@@ -339,7 +339,8 @@ export const register: Register = (on, options) => {
   on('tool.call', { tool: ['Edit', 'Write'] }, async ($, e, next) => {
     const ran = await next(e);
     const fileName = e.file_path.replace(/\\/g, '/').split('/').at(-1) ?? '';
-    if (fileName.toLowerCase() === session.settings.taskFileName.toLowerCase()) {
+    // By name only: a refresh runs discovery again, so a file of that name outside the spec folders is never added.
+    if (session.settings.taskFileNames.some((name) => name.toLowerCase() === fileName.toLowerCase())) {
       await refresh(hostOf($), session).catch(() => undefined);
     }
 
@@ -579,7 +580,7 @@ export const register: Register = (on, options) => {
         {failure !== null && <Text dimColor>{failure}</Text>}
         {list.length === 0 && failure === null && (
           <Text dimColor>
-            No {settings.specPathPattern}/{settings.taskFileName} found in this folder.
+            {`No ${settings.taskFileNames.map((name) => `${settings.specPathPattern}/${name}`).join(' or ')} found in this folder.`}
           </Text>
         )}
         {rows.map(drawRow)}
