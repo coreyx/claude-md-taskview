@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-18
+
 ### Added
 - **Implementation plans:** `spec/<name>/implementation_plan.md` files show in the pane beside `tasks.md` files, as in the VS Code extension. A plan shows only the tasks under its `## Proposed Changes` heading, with its areas as the top level and its other sections left out and uncounted; a plan without that heading is shown whole, minus headings with no tasks. A folder holding both files gets a group for each, named `<folder> (tasks.md)` and `<folder> (implementation_plan.md)`.
 - **`taskFileNames` setting:** comma-separated task file names, default `tasks.md, implementation_plan.md`.

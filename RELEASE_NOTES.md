@@ -1,5 +1,39 @@
 # Release Notes
 
+## v0.5.0 - 2026-10-18
+
+Implementation plans now show in the pane beside task lists, as they do in the VS Code extension.
+
+### Implementation plans in the pane
+
+A spec that keeps its checklist in `spec/<name>/implementation_plan.md`, rather than `tasks.md`, used to show nothing. The pane now finds both files.
+
+For a plan, the pane shows only its checklist: the tasks under its `## Proposed Changes` heading, grouped by the areas beneath it. The plan's other sections (User Review Required, Open Questions, Verification Plan and so on) are left out, and a checkbox outside `## Proposed Changes` is neither shown nor counted. A plan without that heading is shown whole, leaving out headings with no tasks.
+
+Pressing a task in a plan works as it does in `tasks.md`: one character changes in the file.
+
+If a spec folder holds both files, it gets a group for each, named `<folder> (tasks.md)` and `<folder> (implementation_plan.md)`.
+
+### Cleaner labels
+
+Backticks are now stripped from labels in every task file, so `` [NEW] `src/limiter.ts` `` reads `[NEW] src/limiter.ts`. The code inside them is kept exactly as written, so `` `__init__` `` keeps its underscores.
+
+### A new setting for the file names
+
+**Task file names** (`taskFileNames`) lists the files the pane looks for in each spec folder, separated by commas. It defaults to `tasks.md, implementation_plan.md`. Set it to `tasks.md` to leave plans out.
+
+The old **Task file name** setting (`taskFileName`) is deprecated. A name set there is added to the list rather than replacing it, so an old value never hides plans or task lists.
+
+### Updating
+
+From a shell:
+
+```bash
+claude plugin update md-taskview@claude-md-taskview
+```
+
+Then start a new session.
+
 ## v0.4.1 - 2026-10-17
 
 A fix for the pane going empty partway through a session.

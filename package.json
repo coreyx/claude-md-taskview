@@ -1,7 +1,7 @@
 {
   "name": "claude-md-taskview",
-  "version": "0.4.1",
-  "description": "Claude Code mod: a pane showing the milestone and task tree of spec/*/tasks.md files",
+  "version": "0.5.0",
+  "description": "Claude Code mod: a pane showing the milestone and task tree of spec/*/tasks.md and implementation_plan.md files",
   "private": true,
   "type": "module",
   "author": "Corey Struzan",
