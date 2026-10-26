@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-26
+
 ### Added
 - **Following the shell to another folder:** when the session's project folder has no spec folders, the pane shows the specs of the folder Claude's shell has moved to, or of the nearest folder above it with spec folders. A dim line names that folder. This covers a session that works on another repository added with `/add-dir`, which since 0.4.1 showed nothing. The project folder's own specs still win when it has any, so a `cd` within the project never changes what is shown.
 - **`followShellFolder` setting:** turns that fallback off (default: on).

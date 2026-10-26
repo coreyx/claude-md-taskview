@@ -1,5 +1,37 @@
 # Release Notes
 
+## v0.6.0 - 2026-10-26
+
+The pane now follows Claude to another repository when the session's own folder has no specs.
+
+### Tasks from the folder Claude is working in
+
+Sometimes a session starts in one folder and Claude goes on to work in another repository you added with `/add-dir`. Since v0.4.1 the pane looked only in the folder the session started in, so it showed "No spec/*/tasks.md found in this folder." even though the other repository had a task list.
+
+Now, when the session's own folder has no spec folders, the pane looks where Claude's shell has gone. It shows the specs of that folder or of the nearest folder above it, so it still finds them while Claude works deep in `packages/app/src`. A dim line at the top names the folder they come from. Ticking tasks, opening them with `↗` and live updates all work there as usual.
+
+The session's own folder still comes first. If it has specs, they are what you see, wherever the shell goes.
+
+### Only folders Claude may read
+
+By default the pane shows another folder's tasks only when the session's permissions let Claude read them without asking. That covers a folder added with `/add-dir` or a "don't ask again" grant, or one a permission rule allows. Any other folder stays hidden, in auto mode too.
+
+### Two new settings
+
+- **Follow the shell's folder** (`followShellFolder`, on by default): turn it off to keep the pane to the session's own folder.
+- **Only folders Claude may read** (`requireReadPermission`, on by default): turn it off to show the tasks of any folder found from the shell's, without the permission check.
+
+### Updating
+
+From a shell:
+
+```bash
+claude plugin marketplace update claude-md-taskview
+claude plugin update md-taskview@claude-md-taskview
+```
+
+Then start a new session, or resume one with `claude --resume`.
+
 ## v0.5.0 - 2026-10-18
 
 Implementation plans now show in the pane beside task lists, as they do in the VS Code extension.
