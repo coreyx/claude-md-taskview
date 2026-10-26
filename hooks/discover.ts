@@ -12,7 +12,10 @@ export interface Disk {
   stat: (path: string) => Promise<FsStat>;
 }
 
-/** A spec folder that holds a task file. Paths are relative to the working directory, with `/` separators. */
+/**
+ * A spec folder that holds a task file. Paths use `/` separators and are
+ * relative to the project root, or absolute when found from another folder.
+ */
 export interface DiscoveredSpec {
   name: string;
   folderPath: string;
@@ -36,18 +39,20 @@ const SKIPPED_FOLDERS = new Set(['node_modules', 'dist', '.git']);
  *
  * @param disk Lists a folder and stats a path.
  * @param settings Supplies `specPathPattern` and `taskFileNames`.
+ * @param base The folder the pattern starts from: `.` for the project root, or an absolute folder, which the paths found then start with.
  * @returns The task files, sorted by name.
  */
 export async function discover(
   disk: Disk,
-  settings: Pick<Settings, 'specPathPattern' | 'taskFileNames'>
+  settings: Pick<Settings, 'specPathPattern' | 'taskFileNames'>,
+  base = '.'
 ): Promise<DiscoveredSpec[]> {
   const segments = settings.specPathPattern
     .replace(/\\/g, '/')
     .split('/')
     .filter((segment) => segment !== '' && segment !== '.');
 
-  let folders = ['.'];
+  let folders = [base];
   for (const segment of segments) {
     if (!segment.includes('*')) {
       folders = folders.map((folder) => join(folder, segment));
@@ -84,6 +89,45 @@ export async function discover(
   }
 
   return specs.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * The folders to look in when the project root holds no spec folders: the
+ * shell's folder and each folder above it, nearest first.
+ *
+ * An agent's shell wanders below the project it works on (into `packages/app/src`,
+ * or deep into `node_modules`), so the project is the nearest of these with spec
+ * folders, not the shell's folder itself. A walk that starts inside `node_modules`,
+ * `.git` or `dist` starts above it, as those never hold a project's specs. It stops
+ * at the project root, which was looked in already, and below the top of the drive.
+ *
+ * @param shell The session's working directory, which a shell `cd` moves.
+ * @param root The session's project root, if known.
+ * @returns Absolute folders with `/` separators; empty when the shell is at the root.
+ */
+export function shellFolders(shell: string, root: string | undefined): string[] {
+  const parts = normalize(shell).split('/');
+  const skipped = parts.findIndex((part) => SKIPPED_FOLDERS.has(part));
+  let folder = (skipped === -1 ? parts : parts.slice(0, skipped)).join('/');
+  const stop = root === undefined ? undefined : normalize(root);
+
+  const folders: string[] = [];
+  // A path with no separator after its first character is a drive or the top of the file system.
+  while (folder.lastIndexOf('/') > 0) {
+    if (stop !== undefined && isSamePath(folder, stop)) break;
+    folders.push(folder);
+    folder = folder.slice(0, folder.lastIndexOf('/'));
+  }
+  return folders;
+}
+
+function normalize(path: string): string {
+  return path.replace(/\\/g, '/').replace(/\/+$/, '');
+}
+
+/** Compares two normalized paths, ignoring case on a Windows drive, where case does not tell paths apart. */
+function isSamePath(a: string, b: string): boolean {
+  return /^[a-zA-Z]:/.test(a) ? a.toLowerCase() === b.toLowerCase() : a === b;
 }
 
 /** Turns one pattern segment into a whole-name test; any run of `*` matches any characters. */

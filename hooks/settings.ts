@@ -7,6 +7,10 @@ export interface Settings {
   specPathPattern: string;
   /** The task file names looked for in each spec folder, in order, never empty. */
   taskFileNames: string[];
+  /** When the project root has no spec folders, look from the shell's folder upward instead. */
+  followShellFolder: boolean;
+  /** Show a task file found from the shell's folder only when the session's permissions let Claude read it outright. */
+  requireReadPermission: boolean;
   stateTemplate: TemplateName;
   customTemplatePath: string;
   strikeThroughCompleted: boolean;
@@ -64,6 +68,8 @@ export function readSettings(options: PluginOptions): Settings {
   return {
     specPathPattern: text('specPathPattern', 'spec/*'),
     taskFileNames: resolveTaskFileNames(text('taskFileNames', ''), text('taskFileName', '')),
+    followShellFolder: flag('followShellFolder', true),
+    requireReadPermission: flag('requireReadPermission', true),
     stateTemplate: template === 'Obsidian Tasks' || template === 'Custom' ? template : 'Standard (GFM)',
     customTemplatePath: text('customTemplatePath', ''),
     strikeThroughCompleted: flag('strikeThroughCompleted', true),

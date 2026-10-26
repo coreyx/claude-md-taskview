@@ -2,6 +2,7 @@ import type { On, RenderElement } from 'claude-code';
 import { expect, mock, test } from 'claude-code/testing';
 import type { Engine } from 'claude-code/testing';
 
+import { shellFolders } from './discover';
 import { drawPressable, strikeThrough } from './register';
 import type { RowElements } from './register';
 import { readSettings, resolveTaskFileNames } from './settings';
@@ -29,18 +30,31 @@ const PANE = {
   view: {},
 } as const;
 
+/** Where the session's shell is, and which files the session's permissions let Claude read outright. */
+interface Shell {
+  /** The session's working directory; the project root when left out. */
+  cwd?: string;
+  /** Answers a Read check for a path with `/` separators; every path is readable when left out. */
+  isReadable?: (path: string) => boolean;
+}
+
 /**
  * Answers everything the mod asks of Claude Code from memory: a disk of
  * files with modification times, the store, the clock, and the commands and
  * toasts it raises, each recorded for the test to read.
+ *
+ * A file's key is its path relative to the project root, C:\work, or an
+ * absolute path for a file outside it.
  */
-function world(on: On, files: Record<string, string>, takenCommands: string[] = []) {
+function world(on: On, files: Record<string, string>, takenCommands: string[] = [], shell: Shell = {}) {
   const state = {
     files: { ...files },
     mtimes: Object.fromEntries(Object.keys(files).map((path) => [path, 1000])) as Record<string, number>,
     reads: [] as string[],
     /** Every path the mod handed `$.fs`, as the hook saw it. */
     asked: [] as string[],
+    /** Every path the mod asked a Read permission check for. */
+    checked: [] as string[],
     writes: [] as { path: string; text: string }[],
     toasts: [] as string[],
     commands: [] as string[],
@@ -56,17 +70,14 @@ function world(on: On, files: Record<string, string>, takenCommands: string[] = 
     },
   };
 
-  // The engine resolves a relative path against the session's folder before a hook sees it, so each
-  // request is matched back to the test's relative paths by its tail.
-  const folders = new Set(
-    Object.keys(files).flatMap((path) => path.split('/').map((_, depth, parts) => parts.slice(0, depth).join('/'))),
-  );
+  // The mod anchors every path it asks for, so a path under C:\work maps to its relative key and any
+  // other to itself. A path left relative would be read from this process's folder and found nowhere.
+  const root = CWD.replace(/\\/g, '/');
+  const isAbsoluteKey = (key: string) => /^[a-zA-Z]:\//.test(key);
   const relative = (asked: string): string => {
-    const path = asked.replace(/\\/g, '/');
-    const known = [...Object.keys(state.files), ...folders]
-      .filter((one) => one !== '' && (path === one || path.endsWith(`/${one}`)))
-      .sort((a, b) => b.length - a.length)[0];
-    return known ?? '';
+    const path = asked.replace(/\\/g, '/').replace(/\/+$/, '');
+    if (path.toLowerCase() === root.toLowerCase()) return '';
+    return path.toLowerCase().startsWith(`${root.toLowerCase()}/`) ? path.slice(root.length + 1) : path;
   };
 
   on('fs.list', (_$, e) => {
@@ -75,7 +86,7 @@ function world(on: On, files: Record<string, string>, takenCommands: string[] = 
     const prefix = folder === '' ? '' : `${folder}/`;
     const names = new Map<string, 'file' | 'dir'>();
     for (const path of Object.keys(state.files)) {
-      if (!path.startsWith(prefix)) continue;
+      if (!path.startsWith(prefix) || (prefix === '' && isAbsoluteKey(path))) continue;
       const [name = '', ...deeper] = path.slice(prefix.length).split('/');
       names.set(name, deeper.length > 0 ? 'dir' : 'file');
     }
@@ -128,6 +139,13 @@ function world(on: On, files: Record<string, string>, takenCommands: string[] = 
   on('session.start', (_$, e) => ({ cwd: e.cwd }));
   // The project root, which a shell `cd` does not move. Without it a relative path would be read from this process's folder.
   on('session.root', () => ({ value: CWD }));
+  // The shell's folder, which a `cd` moves; without it the kit would answer with this process's folder.
+  on('session.cwd', () => ({ value: shell.cwd ?? CWD }));
+  on('tool.check', (_$, e) => {
+    const path = String((e.input as { file_path?: unknown }).file_path ?? '').replace(/\\/g, '/');
+    state.checked.push(path);
+    return { decision: (shell.isReadable?.(path) ?? true) ? ('allow' as const) : ('ask' as const) };
+  });
   on('classic.SessionStart', () => ({}));
 
   return state;
@@ -410,6 +428,102 @@ test('every path is read from the project root, not a working directory a shell 
   expect((await ui.find({ key: 'r-g-0' }))?.text).toContain('auth (2/3)');
   await ui.unmount();
 });
+
+test("the shell's folders are walked upward to the project root, skipping tool folders", () => {
+  expect(shellFolders('C:\\other\\packages\\app', 'C:\\work')).toEqual([
+    'C:/other/packages/app',
+    'C:/other/packages',
+    'C:/other',
+  ]);
+  expect(shellFolders('C:\\work', 'C:\\work')).toEqual([]);
+  // Below the root the walk stops at it, whatever the case of the drive path.
+  expect(shellFolders('c:\\Work\\spec\\auth\\', 'C:\\work')).toEqual(['c:/Work/spec/auth', 'c:/Work/spec']);
+  // A package's own folders never stand for the project.
+  expect(shellFolders('C:\\other\\node_modules\\.pnpm\\x\\node_modules\\x', 'C:\\work')).toEqual(['C:/other']);
+  expect(shellFolders('/home/u/proj/src', '/srv/root')).toEqual(['/home/u/proj/src', '/home/u/proj', '/home/u']);
+});
+
+/** Where an agent's shell went: a subfolder of another repository, whose specs are at its top. */
+const OTHER_SHELL = 'C:\\other\\packages\\app\\src';
+const OTHER_PATH = 'C:/other/spec/gamma/tasks.md';
+
+const openTerminal = async ($: Engine) => {
+  await $.session.start({ cwd: CWD, surface: 'terminal', isInteractive: true });
+  return $.ui.mount({ plugin: 'md-taskview', surface: 'terminal', component: 'Pane', requestId: 'md-tasks', props: PANE });
+};
+
+test("a project root without specs shows the nearest specs above the shell's folder", async ($, on) => {
+  const disk = world(on, { 'README.md': 'no specs', [OTHER_PATH]: BILLING }, [], { cwd: OTHER_SHELL });
+  const ui = await openTerminal($);
+
+  expect((await ui.find({ key: 'r-g-0' }))?.text).toContain('gamma (0/2)');
+  expect(await ui.find({ type: 'Text', text: "From other, found from the shell's folder" })).toBeDefined();
+  // Shown only once a Read of it is allowed outright.
+  expect(disk.checked).toContain(OTHER_PATH);
+
+  await ui.press({ key: 't-0-0' });
+  expect(disk.writes).toEqual([{ path: OTHER_PATH, text: BILLING.replace('- [ ] Invoices', '- [x] Invoices') }]);
+
+  disk.edit(OTHER_PATH, '- [x] Invoices\n- [x] Refunds\n');
+  await disk.clock.advance(1500);
+  expect((await ui.find({ key: 'r-g-0' }))?.text).toContain('gamma (2/2)');
+  await ui.unmount();
+});
+
+test("the project root's specs win over the shell's folder", async ($, on) => {
+  const disk = world(on, { [AUTH_PATH]: AUTH, [OTHER_PATH]: BILLING }, [], { cwd: OTHER_SHELL });
+  const ui = await openTerminal($);
+
+  expect((await ui.find({ key: 'r-g-0' }))?.text).toContain('auth (2/3)');
+  expect(await ui.find({ key: 'r-g-1' })).toBeUndefined();
+  expect(await ui.find({ type: 'Text', text: "From other, found from the shell's folder" })).toBeUndefined();
+  expect(disk.checked).toEqual([]);
+  await ui.unmount();
+});
+
+test("a folder Claude may not read outright is not shown", async ($, on) => {
+  const disk = world(on, { 'README.md': 'no specs', [OTHER_PATH]: BILLING }, [], {
+    cwd: OTHER_SHELL,
+    isReadable: (path) => !path.startsWith('C:/other/'),
+  });
+  const ui = await openTerminal($);
+
+  expect(disk.checked).toContain(OTHER_PATH);
+  expect(await ui.find({ key: 'r-g-0' })).toBeUndefined();
+  expect(
+    await ui.find({ type: 'Text', text: 'No spec/*/tasks.md or spec/*/implementation_plan.md found in this folder.' }),
+  ).toBeDefined();
+  await ui.unmount();
+});
+
+test(
+  'with requireReadPermission off, the permission is not asked',
+  { options: { requireReadPermission: false } },
+  async ($, on) => {
+    const disk = world(on, { 'README.md': 'no specs', [OTHER_PATH]: BILLING }, [], {
+      cwd: OTHER_SHELL,
+      isReadable: () => false,
+    });
+    const ui = await openTerminal($);
+
+    expect((await ui.find({ key: 'r-g-0' }))?.text).toContain('gamma (0/2)');
+    expect(disk.checked).toEqual([]);
+    await ui.unmount();
+  },
+);
+
+test(
+  "with followShellFolder off, the pane keeps to the project root",
+  { options: { followShellFolder: false } },
+  async ($, on) => {
+    const disk = world(on, { 'README.md': 'no specs', [OTHER_PATH]: BILLING }, [], { cwd: OTHER_SHELL });
+    const ui = await openTerminal($);
+
+    expect(await ui.find({ key: 'r-g-0' })).toBeUndefined();
+    expect(disk.asked.filter((path) => path.replace(/\\/g, '/').startsWith('C:/other'))).toEqual([]);
+    await ui.unmount();
+  },
+);
 
 for (const surface of SURFACES) {
   test(`${surface}: the open control runs "code -g" at the row's line and leaves the task alone`, async ($, on) => {

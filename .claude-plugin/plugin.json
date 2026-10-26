@@ -28,6 +28,18 @@
       "description": "Deprecated: use Task file names. A name set here is added to that list. Leave empty.",
       "default": ""
     },
+    "followShellFolder": {
+      "type": "boolean",
+      "title": "Follow the shell's folder",
+      "description": "When the project folder has no spec folders, show the tasks of the folder Claude's shell has moved to, or of the nearest folder above it that has spec folders.",
+      "default": true
+    },
+    "requireReadPermission": {
+      "type": "boolean",
+      "title": "Only folders Claude may read",
+      "description": "With Follow the shell's folder on, show another folder's tasks only when the session's permissions let Claude read them outright: the folder is one of the session's working folders (added with /add-dir or a permission grant), or a permission rule allows it.",
+      "default": true
+    },
     "stateTemplate": {
       "type": "string",
       "title": "State template",

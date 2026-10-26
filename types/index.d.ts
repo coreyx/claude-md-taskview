@@ -68,6 +68,8 @@ declare module 'claude-code' {
       error: string | null;
       /** Element key of the task row whose state picker is open, or null when none is. */
       picker: string | null;
+      /** The folder the groups were found in, when the shell's folder stood in for a project root without specs; else null. */
+      source: string | null;
     };
   }
 }

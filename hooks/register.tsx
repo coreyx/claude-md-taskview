@@ -5,6 +5,7 @@ import { replaceStateChar } from '../core/mutate';
 import { getNextState } from '../core/templates';
 import type { SpecGroup, TaskNode } from '../core/types';
 import type { SpecGroup as ContractSpecGroup } from '../types';
+import { shellFolders } from './discover';
 import { buildRows, collapsibleIds, findTask, stateGlyph } from './rows';
 import type { Row, TaskRow } from './rows';
 import { readSettings } from './settings';
@@ -43,6 +44,7 @@ const collapsed = atom({ plugin: 'md-taskview', key: 'collapsed' } as const, [])
 const hideCompleted = atom({ plugin: 'md-taskview', key: 'hideCompleted' } as const, false);
 const error = atom({ plugin: 'md-taskview', key: 'error' } as const, null);
 const picker = atom({ plugin: 'md-taskview', key: 'picker' } as const, null);
+const source = atom({ plugin: 'md-taskview', key: 'source' } as const, null);
 
 /** One styled run of text in a row. */
 interface Part {
@@ -159,6 +161,30 @@ async function atRoot($: EngineInterface, path: string): Promise<string> {
   return path === '.' || path === '' ? root : `${root.replace(/[\\/]+$/, '')}/${path}`;
 }
 
+/**
+ * The folders to look in when the project root has no spec folders: the
+ * shell's working directory and those above it, up to the root.
+ */
+async function shellFoldersOf($: EngineInterface): Promise<string[]> {
+  const shell = await $.session.cwd().catch(() => undefined);
+  return shell === undefined ? [] : shellFolders(shell, await rootOf($));
+}
+
+/**
+ * Whether the session's permissions let Claude read a file outright: asks the
+ * engine's decision for a Read of it, without running it.
+ *
+ * That is `allow` under the project root, under a folder added with `/add-dir`
+ * or a "don't ask again" grant, and for a path a permission rule allows. Any
+ * other folder is `ask`, in auto mode too (where a classifier, not the
+ * person, would decide), and counts as not readable. The mod's own `$.fs` can
+ * read it either way, which is why the check is asked separately.
+ */
+async function mayRead($: EngineInterface, path: string): Promise<boolean> {
+  const check = await $.tool.check({ tool: 'Read', input: { file_path: path } }).catch(() => undefined);
+  return check?.decision === 'allow';
+}
+
 /** What hooks/sync.ts and hooks/discover.ts need from Claude Code, as closures over `$`. */
 function hostOf($: EngineInterface): Host {
   return {
@@ -169,7 +195,10 @@ function hostOf($: EngineInterface): Host {
       const content = await $.fs.read(await atRoot($, path));
       return typeof content === 'string' ? content : '';
     },
+    shellFolders: () => shellFoldersOf($),
+    mayRead: (path) => mayRead($, path),
     setGroups: (parsed) => update($, groups, () => parsed),
+    setSource: (folder) => update($, source, () => folder),
     setError: (message) => update($, error, () => message),
     toast: (text) => $.ui.toast(text),
   };
@@ -383,6 +412,7 @@ export const register: Register = (on, options) => {
     const isHiding = await read($, hideCompleted);
     const failure = await read($, error);
     const pickerKey = await read($, picker);
+    const from = await read($, source);
 
     const { settings, template } = session;
     // The terminal styles the Text inside a Button. The Desktop Code tab draws a Button's content as
@@ -578,6 +608,10 @@ export const register: Register = (on, options) => {
           />
         </Box>
         {failure !== null && <Text dimColor>{failure}</Text>}
+        {/* Tasks from somewhere other than the project folder say where they are from. */}
+        {from !== null && list.length > 0 && (
+          <Text dimColor>{fit(`From ${from.split('/').at(-1) ?? from}, found from the shell's folder`, 0)}</Text>
+        )}
         {list.length === 0 && failure === null && (
           <Text dimColor>
             {`No ${settings.taskFileNames.map((name) => `${settings.specPathPattern}/${name}`).join(' or ')} found in this folder.`}
