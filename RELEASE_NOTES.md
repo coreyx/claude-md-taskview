@@ -1,5 +1,43 @@
 # Release Notes
 
+## v0.7.0 - 2026-10-26
+
+The pane now finds another repository's tasks from the files Claude works on, not only from where its shell is.
+
+### Tasks from the folders Claude works in
+
+v0.6.0 followed Claude's shell to another folder when the session's own folder had no specs. But Claude often works in another repository without its shell ever going there. It reads and edits files by their full paths, in a folder you allowed from a permission dialog. The pane missed those.
+
+Now, when the session's own folder has no specs, the pane looks in this order:
+
+1. The folder Claude's shell has moved to, as in v0.6.0.
+2. The folders Claude has just read or edited a file in, and folders you added with `/add-dir`, most recent first.
+3. The working folders kept in your settings.
+
+From each one it looks upward for the nearest folder with spec folders, and shows the first it finds. The dim line at the top now reads "From <folder>, where Claude is working". The session's own folder still comes first whenever it has specs.
+
+As before, another folder's tasks are shown only when the session's permissions let Claude read them outright. If Claude can't read the first project found, the pane now moves on to the next place Claude is working, instead of showing nothing.
+
+### Good to know
+
+- **After a restart,** a folder you added for one session is gone, for Claude Code and the pane alike. Add it again with `/add-dir`, and its tasks show at once. Or start the session in that folder.
+- **In auto mode,** Claude can read a folder that isn't a working folder when the classifier allows it, but that doesn't make it a working folder. The pane keeps such a folder hidden while **Only folders Claude may read** is on. Add the folder with `/add-dir`, or turn that setting off.
+
+### A new setting
+
+- **Follow working folders** (`followWorkingFolders`, on by default): turn it off to look only in the session's own folder and the shell's.
+
+### Updating
+
+From a shell:
+
+```bash
+claude plugin marketplace update claude-md-taskview
+claude plugin update md-taskview@claude-md-taskview
+```
+
+Then start a new session, or resume one with `claude --resume`.
+
 ## v0.6.0 - 2026-10-26
 
 The pane now follows Claude to another repository when the session's own folder has no specs.
