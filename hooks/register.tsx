@@ -5,11 +5,11 @@ import { replaceStateChar } from '../core/mutate';
 import { getNextState } from '../core/templates';
 import type { SpecGroup, TaskNode } from '../core/types';
 import type { SpecGroup as ContractSpecGroup } from '../types';
-import { shellFolders } from './discover';
+import { foldersUpward } from './discover';
 import { buildRows, collapsibleIds, findTask, stateGlyph } from './rows';
 import type { Row, TaskRow } from './rows';
 import { readSettings } from './settings';
-import { createSession, loadTemplate, poll, refresh } from './sync';
+import { createSession, loadTemplate, noteWorkingFolder, poll, refresh } from './sync';
 import type { Host, Session } from './sync';
 
 // types/index.d.ts has to repeat core's types; this line stops compiling if one changes without the other.
@@ -162,12 +162,36 @@ async function atRoot($: EngineInterface, path: string): Promise<string> {
 }
 
 /**
- * The folders to look in when the project root has no spec folders: the
- * shell's working directory and those above it, up to the root.
+ * The folders to look in from the shell when the project root has no spec
+ * folders: the shell's working directory and those above it, up to the root.
  */
 async function shellFoldersOf($: EngineInterface): Promise<string[]> {
   const shell = await $.session.cwd().catch(() => undefined);
-  return shell === undefined ? [] : shellFolders(shell, await rootOf($));
+  return shell === undefined ? [] : foldersUpward(shell, await rootOf($));
+}
+
+/**
+ * The working folders the settings add to every session, as the engine
+ * merges them (`permissions.additionalDirectories`), anchored to the project
+ * root when relative.
+ *
+ * The folders added for this session alone, by `/add-dir` or a permission
+ * grant, are not in the settings, and the mods API does not list them; the
+ * `classic.DirectoryAdded` and `tool.call` hooks note those as they happen.
+ */
+async function rememberedFolders($: EngineInterface): Promise<string[]> {
+  const settings = await $.settings.read().catch(() => undefined);
+  const permissions = settings?.permissions as { additionalDirectories?: unknown } | undefined;
+  const folders = Array.isArray(permissions?.additionalDirectories) ? permissions.additionalDirectories : [];
+
+  const resolved: string[] = [];
+  for (const folder of folders) {
+    // A `~` path is the home folder's, which the mod cannot name; it is left out rather than misread.
+    if (typeof folder === 'string' && folder.trim() !== '' && !folder.startsWith('~')) {
+      resolved.push(await atRoot($, folder.trim()));
+    }
+  }
+  return resolved;
 }
 
 /**
@@ -196,6 +220,8 @@ function hostOf($: EngineInterface): Host {
       return typeof content === 'string' ? content : '';
     },
     shellFolders: () => shellFoldersOf($),
+    foldersUpward: async (start) => foldersUpward(start, await rootOf($)),
+    rememberedFolders: () => rememberedFolders($),
     mayRead: (path) => mayRead($, path),
     setGroups: (parsed) => update($, groups, () => parsed),
     setSource: (folder) => update($, source, () => folder),
@@ -364,15 +390,38 @@ export const register: Register = (on, options) => {
     return openPane($, mod);
   });
 
-  // Claude's own edit to a task file shows at once, not at the next poll.
-  on('tool.call', { tool: ['Edit', 'Write'] }, async ($, e, next) => {
-    const ran = await next(e);
-    const fileName = e.file_path.replace(/\\/g, '/').split('/').at(-1) ?? '';
-    // By name only: a refresh runs discovery again, so a file of that name outside the spec folders is never added.
-    if (session.settings.taskFileNames.some((name) => name.toLowerCase() === fileName.toLowerCase())) {
+  // A folder added with /add-dir is where Claude may work next, so its specs can show at once.
+  on('classic.DirectoryAdded', async ($, e, next) => {
+    if (session.settings.followWorkingFolders && noteWorkingFolder(session, e.directory) && !session.isFromRoot) {
       await refresh(hostOf($), session).catch(() => undefined);
     }
 
+    return next(e);
+  });
+
+  on('tool.call', { tool: ['Read', 'Edit', 'Write', 'Glob', 'Grep', 'NotebookEdit'] }, async ($, e, next) => {
+    const ran = await next(e);
+    if (ran.isError === true || ('deny' in ran && ran.deny !== undefined)) return ran;
+
+    const filePath = e.tool === 'NotebookEdit' ? e.notebook_path : e.tool === 'Glob' || e.tool === 'Grep' ? e.path : e.file_path;
+    if (typeof filePath !== 'string' || filePath === '') return ran;
+    const path = filePath.replace(/\\/g, '/');
+
+    // Claude's own edit to a task file shows at once, not at the next poll. By name only: a refresh runs
+    // discovery again, so a file of that name outside the spec folders is never added.
+    const fileName = path.split('/').at(-1) ?? '';
+    let isStale =
+      (e.tool === 'Edit' || e.tool === 'Write') &&
+      session.settings.taskFileNames.some((name) => name.toLowerCase() === fileName.toLowerCase());
+
+    // A file Claude reads or edits, wherever it is, says where Claude is working. That covers a folder
+    // granted from a permission dialog, which no event reports. Glob and Grep name a folder to search.
+    if (session.settings.followWorkingFolders && ABSOLUTE.test(path)) {
+      const folder = e.tool === 'Glob' || e.tool === 'Grep' ? path : path.slice(0, path.lastIndexOf('/'));
+      isStale = (noteWorkingFolder(session, folder) && !session.isFromRoot) || isStale;
+    }
+
+    if (isStale) await refresh(hostOf($), session).catch(() => undefined);
     return ran;
   });
 
@@ -610,7 +659,7 @@ export const register: Register = (on, options) => {
         {failure !== null && <Text dimColor>{failure}</Text>}
         {/* Tasks from somewhere other than the project folder say where they are from. */}
         {from !== null && list.length > 0 && (
-          <Text dimColor>{fit(`From ${from.split('/').at(-1) ?? from}, found from the shell's folder`, 0)}</Text>
+          <Text dimColor>{fit(`From ${from.split('/').at(-1) ?? from}, where Claude is working`, 0)}</Text>
         )}
         {list.length === 0 && failure === null && (
           <Text dimColor>

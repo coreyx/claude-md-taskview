@@ -92,42 +92,48 @@ export async function discover(
 }
 
 /**
- * The folders to look in when the project root holds no spec folders: the
- * shell's folder and each folder above it, nearest first.
+ * The folders to look in from a place Claude is working when the project root
+ * holds no spec folders: that folder and each folder above it, nearest first.
  *
- * An agent's shell wanders below the project it works on (into `packages/app/src`,
- * or deep into `node_modules`), so the project is the nearest of these with spec
- * folders, not the shell's folder itself. A walk that starts inside `node_modules`,
- * `.git` or `dist` starts above it, as those never hold a project's specs. It stops
- * at the project root, which was looked in already, and below the top of the drive.
+ * Claude works below the project it is on (its shell in `packages/app/src`, or
+ * deep in `node_modules`; a file it reads in `src/`), so the project is the
+ * nearest of these with spec folders, not the folder itself. A walk that starts
+ * inside `node_modules`, `.git` or `dist` starts above it, as those never hold a
+ * project's specs. It stops at the project root, which was looked in already,
+ * and below the top of the drive.
  *
- * @param shell The session's working directory, which a shell `cd` moves.
+ * @param start Where Claude is working: the shell's folder, a working folder, or a folder Claude touched a file in.
  * @param root The session's project root, if known.
- * @returns Absolute folders with `/` separators; empty when the shell is at the root.
+ * @returns Absolute folders with `/` separators; empty when the start is the root.
  */
-export function shellFolders(shell: string, root: string | undefined): string[] {
-  const parts = normalize(shell).split('/');
+export function foldersUpward(start: string, root: string | undefined): string[] {
+  const parts = normalize(start).split('/');
   const skipped = parts.findIndex((part) => SKIPPED_FOLDERS.has(part));
   let folder = (skipped === -1 ? parts : parts.slice(0, skipped)).join('/');
-  const stop = root === undefined ? undefined : normalize(root);
+  const stop = root === undefined ? undefined : pathKey(root);
 
   const folders: string[] = [];
   // A path with no separator after its first character is a drive or the top of the file system.
   while (folder.lastIndexOf('/') > 0) {
-    if (stop !== undefined && isSamePath(folder, stop)) break;
+    if (pathKey(folder) === stop) break;
     folders.push(folder);
     folder = folder.slice(0, folder.lastIndexOf('/'));
   }
   return folders;
 }
 
-function normalize(path: string): string {
-  return path.replace(/\\/g, '/').replace(/\/+$/, '');
+/**
+ * A path in a form that compares equal for the same folder: `/` separators,
+ * no trailing one, and lower case on a Windows drive, where case does not
+ * tell paths apart.
+ */
+export function pathKey(path: string): string {
+  const normalized = normalize(path);
+  return /^[a-zA-Z]:/.test(normalized) ? normalized.toLowerCase() : normalized;
 }
 
-/** Compares two normalized paths, ignoring case on a Windows drive, where case does not tell paths apart. */
-function isSamePath(a: string, b: string): boolean {
-  return /^[a-zA-Z]:/.test(a) ? a.toLowerCase() === b.toLowerCase() : a === b;
+function normalize(path: string): string {
+  return path.replace(/\\/g, '/').replace(/\/+$/, '');
 }
 
 /** Turns one pattern segment into a whole-name test; any run of `*` matches any characters. */

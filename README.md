@@ -44,7 +44,15 @@ For an `implementation_plan.md`, the pane shows only the tasks under its `## Pro
 
 The pane re-reads a task file within about two seconds of it changing on disk, and at once after Claude edits one.
 
-The pane looks for spec folders in the session's project folder, where it started, wherever Claude's shell `cd`s to within it. If the project folder has none, the pane looks in the folder the shell has moved to, then in each folder above that, and shows the specs of the nearest one that has any. A dim line at the top then names that folder. This covers a session that works on another repository added with `/add-dir`. By default those tasks are shown only when the session's permissions let Claude read them outright (see `followShellFolder` and `requireReadPermission` below).
+The pane looks for spec folders in the session's project folder, where it started, wherever Claude's shell `cd`s to within it. If the project folder has none, the pane looks where Claude is working, in this order:
+
+1. The folder the shell has moved to.
+2. The folders Claude has read or edited a file in, or added with `/add-dir`, most recent first.
+3. The working folders kept in settings (`permissions.additionalDirectories`).
+
+From each of these it looks in that folder and each one above it, and the nearest with spec folders is that project. The pane shows the first project it finds, and a dim line at the top names it. This covers a session that works on another repository, for example one added with `/add-dir` or a permission grant. By default those tasks are shown only when the session's permissions let Claude read them outright (see `followShellFolder`, `followWorkingFolders` and `requireReadPermission` below).
+
+A folder added for one session is forgotten when the session restarts, by Claude Code and the pane alike. After a restart, add the folder again with `/add-dir`, or start the session in that folder.
 
 ## Settings
 
@@ -76,7 +84,8 @@ The dialog shown at install does not fill in the defaults of the text settings: 
 | `taskFileNames` | `tasks.md, implementation_plan.md` | Comma-separated task file names looked for in each spec folder. For `implementation_plan.md`, only the tasks under `## Proposed Changes` are shown. |
 | `taskFileName` | (empty) | Deprecated: use `taskFileNames`. A name set here is added to that list. |
 | `followShellFolder` | `true` | When the project folder has no spec folders, show the specs of the folder Claude's shell has moved to, or of the nearest folder above it that has any. The walk starts above any `node_modules`, `.git` or `dist` folder the shell is in. |
-| `requireReadPermission` | `true` | With `followShellFolder`, show another folder's tasks only when the session's permissions let Claude read them outright. That is a folder added with `/add-dir` or a "don't ask again" grant, or one a permission rule allows. A folder Claude would have to ask about is not shown, in auto mode too. |
+| `followWorkingFolders` | `true` | When the project folder has no spec folders, also look from the folders Claude reads or edits files in, folders added with `/add-dir`, and working folders kept in settings, after the shell's folder. |
+| `requireReadPermission` | `true` | Show another folder's tasks only when the session's permissions let Claude read them outright. That is a folder added with `/add-dir` or a "don't ask again" grant, or one a permission rule allows. A folder Claude would have to ask about is not shown, in auto mode too. |
 | `stateTemplate` | `Standard (GFM)` | `Standard (GFM)`: done and not done only. `Obsidian Tasks`: also in progress `[/]`, cancelled `[-]`, needs clarification `[?]` and important `[!]`. `Custom`: your own template. |
 | `customTemplatePath` | (empty) | Path to a `*.jsonc` state template, used when `stateTemplate` is `Custom`. |
 | `strikeThroughCompleted` | `true` | Strike through and dim completed and cancelled tasks. |

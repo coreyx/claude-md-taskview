@@ -2,7 +2,7 @@ import type { On, RenderElement } from 'claude-code';
 import { expect, mock, test } from 'claude-code/testing';
 import type { Engine } from 'claude-code/testing';
 
-import { shellFolders } from './discover';
+import { foldersUpward } from './discover';
 import { drawPressable, strikeThrough } from './register';
 import type { RowElements } from './register';
 import { readSettings, resolveTaskFileNames } from './settings';
@@ -147,6 +147,7 @@ function world(on: On, files: Record<string, string>, takenCommands: string[] = 
     return { decision: (shell.isReadable?.(path) ?? true) ? ('allow' as const) : ('ask' as const) };
   });
   on('classic.SessionStart', () => ({}));
+  on('classic.DirectoryAdded', () => ({}));
 
   return state;
 }
@@ -429,18 +430,18 @@ test('every path is read from the project root, not a working directory a shell 
   await ui.unmount();
 });
 
-test("the shell's folders are walked upward to the project root, skipping tool folders", () => {
-  expect(shellFolders('C:\\other\\packages\\app', 'C:\\work')).toEqual([
+test("folders are walked upward to the project root, skipping tool folders", () => {
+  expect(foldersUpward('C:\\other\\packages\\app', 'C:\\work')).toEqual([
     'C:/other/packages/app',
     'C:/other/packages',
     'C:/other',
   ]);
-  expect(shellFolders('C:\\work', 'C:\\work')).toEqual([]);
+  expect(foldersUpward('C:\\work', 'C:\\work')).toEqual([]);
   // Below the root the walk stops at it, whatever the case of the drive path.
-  expect(shellFolders('c:\\Work\\spec\\auth\\', 'C:\\work')).toEqual(['c:/Work/spec/auth', 'c:/Work/spec']);
+  expect(foldersUpward('c:\\Work\\spec\\auth\\', 'C:\\work')).toEqual(['c:/Work/spec/auth', 'c:/Work/spec']);
   // A package's own folders never stand for the project.
-  expect(shellFolders('C:\\other\\node_modules\\.pnpm\\x\\node_modules\\x', 'C:\\work')).toEqual(['C:/other']);
-  expect(shellFolders('/home/u/proj/src', '/srv/root')).toEqual(['/home/u/proj/src', '/home/u/proj', '/home/u']);
+  expect(foldersUpward('C:\\other\\node_modules\\.pnpm\\x\\node_modules\\x', 'C:\\work')).toEqual(['C:/other']);
+  expect(foldersUpward('/home/u/proj/src', '/srv/root')).toEqual(['/home/u/proj/src', '/home/u/proj', '/home/u']);
 });
 
 /** Where an agent's shell went: a subfolder of another repository, whose specs are at its top. */
@@ -457,7 +458,7 @@ test("a project root without specs shows the nearest specs above the shell's fol
   const ui = await openTerminal($);
 
   expect((await ui.find({ key: 'r-g-0' }))?.text).toContain('gamma (0/2)');
-  expect(await ui.find({ type: 'Text', text: "From other, found from the shell's folder" })).toBeDefined();
+  expect(await ui.find({ type: 'Text', text: "From other, where Claude is working" })).toBeDefined();
   // Shown only once a Read of it is allowed outright.
   expect(disk.checked).toContain(OTHER_PATH);
 
@@ -476,7 +477,7 @@ test("the project root's specs win over the shell's folder", async ($, on) => {
 
   expect((await ui.find({ key: 'r-g-0' }))?.text).toContain('auth (2/3)');
   expect(await ui.find({ key: 'r-g-1' })).toBeUndefined();
-  expect(await ui.find({ type: 'Text', text: "From other, found from the shell's folder" })).toBeUndefined();
+  expect(await ui.find({ type: 'Text', text: "From other, where Claude is working" })).toBeUndefined();
   expect(disk.checked).toEqual([]);
   await ui.unmount();
 });
@@ -521,6 +522,92 @@ test(
 
     expect(await ui.find({ key: 'r-g-0' })).toBeUndefined();
     expect(disk.asked.filter((path) => path.replace(/\\/g, '/').startsWith('C:/other'))).toEqual([]);
+    await ui.unmount();
+  },
+);
+
+/** Stands for the Read tool: every read succeeds. */
+const answerReads = (on: On) => on('tool.call', { tool: 'Read' }, () => ({ result: {}, text: 'read' }));
+
+test('a file Claude reads in another folder shows that project\'s specs at once', async ($, on) => {
+  const disk = world(on, { 'README.md': 'no specs', [OTHER_PATH]: BILLING });
+  answerReads(on);
+  const ui = await openTerminal($);
+  expect(await ui.find({ key: 'r-g-0' })).toBeUndefined();
+
+  // The shell is still at the project root, as after a restart; only the file read says where Claude works.
+  await $.tool.call({ tool: 'Read', file_path: 'C:\\other\\packages\\app\\src\\index.ts' });
+
+  expect((await ui.find({ key: 'r-g-0' }))?.text).toContain('gamma (0/2)');
+  expect(await ui.find({ type: 'Text', text: 'From other, where Claude is working' })).toBeDefined();
+  expect(disk.checked).toContain(OTHER_PATH);
+  await ui.unmount();
+});
+
+test('a folder added with /add-dir shows its specs at once', async ($, on) => {
+  world(on, { 'README.md': 'no specs', [OTHER_PATH]: BILLING });
+  const ui = await openTerminal($);
+
+  await $.classic.DirectoryAdded({ directory: 'C:\\other', source: 'slash_command' });
+
+  expect((await ui.find({ key: 'r-g-0' }))?.text).toContain('gamma (0/2)');
+  await ui.unmount();
+});
+
+test('a working folder the settings keep shows from the start', async ($, on) => {
+  const disk = world(on, { 'README.md': 'no specs', [OTHER_PATH]: BILLING });
+  disk.settings.permissions = { additionalDirectories: ['C:\\other', '~/elsewhere'] };
+  const ui = await openTerminal($);
+
+  expect((await ui.find({ key: 'r-g-0' }))?.text).toContain('gamma (0/2)');
+  await ui.unmount();
+});
+
+test("the shell's folder comes before a folder Claude read in, and the root before both", async ($, on) => {
+  const third = 'C:/third/spec/delta/tasks.md';
+  const disk = world(on, { 'README.md': 'no specs', [OTHER_PATH]: BILLING, [third]: '- [ ] One\n' }, [], {
+    cwd: 'C:\\third\\src',
+  });
+  answerReads(on);
+  const ui = await openTerminal($);
+
+  await $.tool.call({ tool: 'Read', file_path: 'C:\\other\\README.md' });
+  expect((await ui.find({ key: 'r-g-0' }))?.text).toContain('delta (0/1)');
+
+  // Once the root has specs of its own, they win.
+  disk.files[AUTH_PATH] = AUTH;
+  disk.mtimes[AUTH_PATH] = 1000;
+  await ui.press({ key: 'refresh' });
+  expect((await ui.find({ key: 'r-g-0' }))?.text).toContain('auth (2/3)');
+  expect(await ui.find({ type: 'Text', text: 'From third, where Claude is working' })).toBeUndefined();
+  await ui.unmount();
+});
+
+test('a project Claude may not read gives way to the next place Claude works', async ($, on) => {
+  const third = 'C:/third/spec/delta/tasks.md';
+  world(on, { 'README.md': 'no specs', [OTHER_PATH]: BILLING, [third]: '- [ ] One\n' }, [], {
+    cwd: 'C:\\third\\src',
+    isReadable: (path) => !path.startsWith('C:/third/'),
+  });
+  answerReads(on);
+  const ui = await openTerminal($);
+
+  await $.tool.call({ tool: 'Read', file_path: 'C:\\other\\README.md' });
+  expect((await ui.find({ key: 'r-g-0' }))?.text).toContain('gamma (0/2)');
+  await ui.unmount();
+});
+
+test(
+  'with followWorkingFolders off, files Claude reads elsewhere change nothing',
+  { options: { followWorkingFolders: false } },
+  async ($, on) => {
+    const disk = world(on, { 'README.md': 'no specs', [OTHER_PATH]: BILLING });
+    disk.settings.permissions = { additionalDirectories: ['C:\\other'] };
+    answerReads(on);
+    const ui = await openTerminal($);
+
+    await $.tool.call({ tool: 'Read', file_path: 'C:\\other\\packages\\app\\src\\index.ts' });
+    expect(await ui.find({ key: 'r-g-0' })).toBeUndefined();
     await ui.unmount();
   },
 );

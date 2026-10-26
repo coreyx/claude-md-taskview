@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Following Claude's working folders:** when the project folder has no spec folders and the shell's folder gives none either, the pane looks from the folders Claude reads or edits files in (Read, Edit, Write, Glob, Grep, NotebookEdit), folders added with `/add-dir`, and the working folders kept in settings (`permissions.additionalDirectories`), most recent first. This covers a folder granted from a permission dialog while the shell stays in the project folder, which 0.6.0 did not find.
+- **`followWorkingFolders` setting:** turns that off (default: on).
+
+### Changed
+- **`requireReadPermission`** applies to every folder found outside the project root. A project Claude may not read now gives way to the next place Claude works, instead of ending the search.
+- **The dim line** above tasks from another folder reads "From <folder>, where Claude is working".
+
 ## [0.6.0] - 2026-10-26
 
 ### Added
